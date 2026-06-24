@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
-type ActiveTab = "servicos" | "horario" | "barbeiro";
+type ActiveTab = "servicos" | "horario" | "barbeiro" | "reserva";
 
 function isSameDay(a: Date, b: Date) {
   return (
@@ -23,7 +23,12 @@ function startOfDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-function Calendar() {
+type CalendarProps = {
+  selected: Date;
+  onSelect: (date: Date) => void;
+};
+
+function Calendar({ selected, onSelect }: CalendarProps) {
   const todayStart = useMemo(() => startOfDay(new Date()), []);
   const currentMonthStart = useMemo(
     () => new Date(todayStart.getFullYear(), todayStart.getMonth(), 1),
@@ -31,7 +36,6 @@ function Calendar() {
   );
 
   const [month, setMonth] = useState(() => currentMonthStart);
-  const [selected, setSelected] = useState<Date>(() => todayStart);
 
   const { monthLabel, weekdayLabels, cells } = useMemo(() => {
     const weekdayLabelsLocal = [
@@ -135,7 +139,7 @@ function Calendar() {
               type="button"
               disabled={disabled}
               onClick={() => {
-                if (!disabled) setSelected(date);
+                if (!disabled) onSelect(date);
               }}
               className={[
                 "h-10 w-10 rounded-full text-sm font-semibold",
@@ -183,36 +187,97 @@ function TimeSlotList({ slots, selectedSlot, onSelect }: TimeSlotListProps) {
   );
 }
 
+type Service = {
+  id: number;
+  name: string;
+  description: string;
+  price: string;
+  priceValue: number;
+};
+
+const services: Service[] = [
+  {
+    id: 1,
+    name: "Corte de Cabelo",
+    description: "Estilo personalizado com as últimas tendências.",
+    price: "R$ 50,00",
+    priceValue: 50,
+  },
+  {
+    id: 2,
+    name: "Corte de Cabelo",
+    description: "Estilo personalizado com as últimas tendências.",
+    price: "R$ 50,00",
+    priceValue: 50,
+  },
+  {
+    id: 3,
+    name: "Corte de Cabelo",
+    description: "Estilo personalizado com as últimas tendências.",
+    price: "R$ 50,00",
+    priceValue: 50,
+  },
+  {
+    id: 4,
+    name: "Corte de Cabelo",
+    description: "Estilo personalizado com as últimas tendências.",
+    price: "R$ 50,00",
+    priceValue: 50,
+  },
+];
+
 const Barbeiro = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>("servicos");
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(() =>
+    startOfDay(new Date()),
+  );
+  const [selectedServices, setSelectedServices] = useState<Set<number>>(
+    new Set(),
+  );
   const timeSlots = useMemo(
     () => ["08:00", "08:30", "09:00", "09:30", "10:00"],
     [],
   );
+
+  const total = useMemo(() => {
+    return services
+      .filter((s) => selectedServices.has(s.id))
+      .reduce((acc, s) => acc + s.priceValue, 0);
+  }, [selectedServices]);
 
   const tabClassName = (tab: ActiveTab) =>
     [
       "rounded-full font-semibold border-2 py-5 px-4 text-md",
       activeTab === tab
         ? "bg-black text-white border-black"
-        : "bg-[#FAFAFA] text-black border-[#F1f1f1]",
+        : "bg-[#FAFAFA] text-black/50 border-[#F1f1f1]",
     ].join(" ");
+
+  const showBottomBar =
+    activeTab === "reserva" ||
+    selectedServices.size > 0 ||
+    selectedSlot !== null;
 
   return (
     <div className="relative">
-      <div className="bg-[#505050]  w-full z-0 h-[360px]"></div>
+      <div className="bg-[#505050] w-full z-0 h-[340px]"></div>
       <Link href="/">
         <Button className="absolute top-4 left-4 rounded-full bg-white h-12 w-12 z-20 text-black">
           <ArrowLeftIcon />
         </Button>
       </Link>
-      <div className="bg-white z-20   py-6 -mt-12 rounded-4xl">
-        <div className=" pb-6 border-b border-[#E5E5E5]">
+      <div
+        className={[
+          "bg-white z-20 py-6 -mt-12 rounded-4xl",
+          showBottomBar ? "pb-28" : "",
+        ].join(" ")}
+      >
+        <div className="pb-6 border-b border-[#E5E5E5]">
           <div className="px-5">
-            <div className=" flex items-center gap-3">
+            <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-full bg-black"></div>
-              <h1 className="text-xl font-bold">Barbeiro</h1>
+              <h1 className="text-xl font-bold">Yvison</h1>
             </div>
             <div className="pt-3">
               <div className="pt-2 text-[#656565] flex items-center gap-2">
@@ -220,129 +285,110 @@ const Barbeiro = () => {
                 <h1>Avenida São Sebastião, 357, São Paulo</h1>
               </div>
               <div className="pt-2 text-[#656565] flex items-center gap-2">
-                <img src="/estrela.svg" alt="" className="w-5 h-5 text-black" />
+                <img
+                  src="/estrela.svg"
+                  alt=""
+                  className="w-5 h-5 text-black"
+                />
                 <h1>5,0 (889 avaliações)</h1>
               </div>
             </div>
           </div>
         </div>
+
         <div className="py-6">
-          <div className="pb-6 border-b border-[#E5E5E5]">
-            <div className="px-5 flex gap-3 ">
-              <Button
-                type="button"
-                className={tabClassName("servicos")}
-                onClick={() => {
-                  setActiveTab("servicos");
-                  setSelectedSlot(null);
-                }}
-              >
-                Serviços
-              </Button>
-              <Button
-                type="button"
-                className={tabClassName("horario")}
-                onClick={() => {
-                  setActiveTab("horario");
-                  setSelectedSlot(null);
-                }}
-              >
-                Horario
-              </Button>
-              <Button
-                type="button"
-                className={tabClassName("barbeiro")}
-                onClick={() => {
-                  setActiveTab("barbeiro");
-                  setSelectedSlot(null);
-                }}
-              >
-                Barbeiro
-              </Button>
+          {activeTab !== "reserva" && (
+            <div className="pb-6 border-b border-[#E5E5E5]">
+              <div className="px-5 flex overflow-x-auto no-scrollbar gap-3">
+                <Button
+                  type="button"
+                  className={tabClassName("servicos")}
+                  onClick={() => {
+                    setActiveTab("servicos");
+                    setSelectedSlot(null);
+                  }}
+                >
+                  Serviços
+                </Button>
+                <Button
+                  type="button"
+                  className={tabClassName("horario")}
+                  onClick={() => {
+                    setActiveTab("horario");
+                    setSelectedSlot(null);
+                  }}
+                >
+                  Horario
+                </Button>
+                <Button
+                  type="button"
+                  className={tabClassName("barbeiro")}
+                  onClick={() => {
+                    setActiveTab("barbeiro");
+                    setSelectedSlot(null);
+                  }}
+                >
+                  Barbeiro
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
+
           <div className="px-5 pt-6">
             {activeTab === "servicos" ? (
-              <div className=" space-y-4 pt-3">
-                <div className="h-36 w-full flex gap-6 items-center bg-[#FAFAFA] border-2  px-3 border-[#F1f1f1] rounded-md ">
-                  <div className="size-28 shrink-0 bg-black/15 rounded-md"></div>
-                  <div className="flex-1 min-w-0">
-                    <div>
-                      <h1 className="font-bold">Corte de Cabelo</h1>
-                    </div>
-                    <div className="pb-2 text-[#656565] text-sm leading-snug">
-                      <h1>Estilo personalizado com as últimas tendências.</h1>
-                    </div>
-                    <div className="flex pt-1 items-center gap-3">
+              <div className="space-y-4 pt-3">
+                {services.map((service) => {
+                  const isSelected = selectedServices.has(service.id);
+                  return (
+                    <div
+                      key={service.id}
+                      className={[
+                        "h-36 w-full flex gap-6 items-center border-2 px-3 rounded-md",
+                        isSelected
+                          ? "bg-black/5 border-black/15"
+                          : "bg-[#FAFAFA] border-[#F1f1f1]",
+                      ].join(" ")}
+                    >
+                      <div className="size-28 shrink-0 bg-black/15 rounded-md"></div>
                       <div className="flex-1 min-w-0">
-                        <h1 className="font-bold">R$ 50,00</h1>
+                        <div>
+                          <h1 className="font-bold">{service.name}</h1>
+                        </div>
+                        <div className="pb-2 text-[#656565] text-sm leading-snug">
+                          <h1>{service.description}</h1>
+                        </div>
+                        <div className="flex pt-1 items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h1 className="font-bold">{service.price}</h1>
+                          </div>
+                          <Button
+                            type="button"
+                            onClick={() =>
+                              setSelectedServices((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(service.id))
+                                  next.delete(service.id);
+                                else next.add(service.id);
+                                return next;
+                              })
+                            }
+                            className={[
+                              "rounded-full font-semibold py-5 px-4 shrink-0",
+                              isSelected
+                                ? "bg-black text-white border border-black"
+                                : "text-black bg-white border border-black/15",
+                            ].join(" ")}
+                          >
+                            {isSelected ? "Selecionado" : "Selecionar"}
+                          </Button>
+                        </div>
                       </div>
-                      <Button className="rounded-full font-semibold py-5 px-4 shrink-0">
-                        Selecionar
-                      </Button>
                     </div>
-                  </div>
-                </div>
-                <div className="h-36 w-full flex gap-6 items-center bg-[#FAFAFA] border-2 px-3 border-[#F1f1f1] rounded-md">
-                  <div className="size-28 shrink-0 bg-black/15 rounded-md"></div>
-                  <div className="flex-1 min-w-0">
-                    <div>
-                      <h1 className="font-bold">Corte de Cabelo</h1>
-                    </div>
-                    <div className="pb-2 text-[#656565] text-sm leading-snug">
-                      <h1>Estilo personalizado com as últimas tendências.</h1>
-                    </div>
-                    <div className="flex pt-1 items-center gap-3">
-                      <div className="flex-1 min-w-0">
-                        <h1 className="font-bold">R$ 50,00</h1>
-                      </div>
-                      <Button className="rounded-full font-semibold px-4 py-5 shrink-0">
-                        Selecionar
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                <div className="h-36 w-full flex gap-6 items-center bg-[#FAFAFA] border-2 px-3 border-[#F1f1f1] rounded-md ">
-                  <div className="size-28 shrink-0 bg-black/15 rounded-md"></div>
-                  <div className="flex-1 min-w-0">
-                    <div>
-                      <h1 className="font-bold">Corte de Cabelo</h1>
-                    </div>
-                    <div className="pb-2 text-[#656565] text-sm leading-snug">
-                      <h1>Estilo personalizado com as últimas tendências.</h1>
-                    </div>
-                    <div className="flex pt-1 items-center gap-3">
-                      <div className="flex-1 min-w-0">
-                        <h1 className="font-bold">R$ 50,00</h1>
-                      </div>
-                      <Button className="rounded-full font-semibold px-4 py-5 shrink-0">
-                        Selecionar
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                <div className="h-36 w-full flex  gap-6 items-center bg-[#FAFAFA] border-2 px-3  border-[#F1f1f1] rounded-md ">
-                  <div className="size-28 shrink-0 bg-black/15 rounded-md"></div>
-                  <div className="flex-1 min-w-0">
-                    <div>
-                      <h1 className="font-bold">Corte de Cabelo</h1>
-                    </div>
-                    <div className="pb-2 text-[#656565] text-sm leading-snug">
-                      <h1>Estilo personalizado com as últimas tendências.</h1>
-                    </div>
-                    <div className="flex pt-1 items-center gap-3">
-                      <div className="flex-1 min-w-0">
-                        <h1 className="font-bold">R$ 50,00</h1>
-                      </div>
-                      <Button className="rounded-full font-semibold px-4 py-5 shrink-0">
-                        Selecionar
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
             ) : activeTab === "horario" ? (
-              <div className="flex flex-col gap-4 ">
+              <div className="flex flex-col gap-4">
                 <div>
                   <h1 className="text-md pt-3 font-semibold uppercase">
                     Horários
@@ -353,19 +399,108 @@ const Barbeiro = () => {
                   selectedSlot={selectedSlot}
                   onSelect={setSelectedSlot}
                 />
-                <Calendar />
+                <Calendar selected={selectedDate} onSelect={setSelectedDate} />
               </div>
-            ) : (
+            ) : activeTab === "barbeiro" ? (
               <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 text-[#656565]">
                 <h1 className="font-semibold text-black pb-1">
-                  Sobre o barbeiro
+                  Sobre o Yvison
                 </h1>
-                <p>Informações do barbeiro vão aqui.</p>
+                <p>Barbeiro profissional com mais de 10 anos de experiência, especializado em cortes modernos e clássicos. Atende na Avenida São Sebastião, 357, São Paulo.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <h1 className="text-lg font-bold">Confirmar Reserva</h1>
+
+                <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-1">
+                  <p className="text-xs font-semibold text-[#656565] uppercase">
+                    Barbearia
+                  </p>
+                  <p className="font-bold">Yvison</p>
+                  <p className="text-sm text-[#656565]">
+                    Avenida São Sebastião, 357, São Paulo
+                  </p>
+                </div>
+
+                <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3">
+                  <p className="text-xs font-semibold text-[#656565] uppercase">
+                    Serviços
+                  </p>
+                  {selectedServices.size === 0 ? (
+                    <p className="text-sm text-[#656565]">
+                      Nenhum serviço selecionado.
+                    </p>
+                  ) : (
+                    services
+                      .filter((s) => selectedServices.has(s.id))
+                      .map((s) => (
+                        <div
+                          key={s.id}
+                          className="flex items-center justify-between"
+                        >
+                          <p className="font-semibold">{s.name}</p>
+                          <p className="font-semibold">{s.price}</p>
+                        </div>
+                      ))
+                  )}
+                </div>
+
+                <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-1">
+                  <p className="text-xs font-semibold text-[#656565] uppercase">
+                    Data e Horário
+                  </p>
+                  <p className="font-semibold">
+                    {selectedDate.toLocaleDateString("pt-BR", {
+                      weekday: "long",
+                      day: "2-digit",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                    {selectedSlot ? ` • ${selectedSlot}` : ""}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex items-center justify-between">
+                  <p className="font-bold text-base">Total</p>
+                  <p className="font-bold text-base">
+                    R${" "}
+                    {total.toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("servicos")}
+                  className="text-sm text-[#656565] underline text-center"
+                >
+                  Editar reserva
+                </button>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {showBottomBar && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#E5E5E5] px-5 py-4">
+          <Button
+            className="w-full rounded-full bg-black text-white font-semibold py-6 text-base"
+            onClick={() => {
+              if (activeTab === "servicos") {
+                setActiveTab("horario");
+              } else if (activeTab === "horario") {
+                setActiveTab("barbeiro");
+              } else if (activeTab === "barbeiro") {
+                setActiveTab("reserva");
+              }
+            }}
+          >
+            {activeTab === "reserva" ? "Finalizar Reserva" : "Confirmar"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

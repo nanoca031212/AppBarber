@@ -7,7 +7,7 @@ export default function Home() {
     <div className=" bg-zinc-50 h-screen px-5 ">
       <Header />
       <Image
-        src="/frame.png"
+        src="/Frame.png"
         alt="Cabelo"
         width={1200}
         height={600}

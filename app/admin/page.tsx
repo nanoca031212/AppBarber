@@ -16,11 +16,19 @@ import {
   AlertCircle,
   Phone,
   Scissors,
+  BarChart2,
+  Eye,
+  MousePointerClick,
+  Zap,
+  ToggleLeft,
+  ToggleRight,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type AdminTab = "dashboard" | "agenda" | "clientes" | "config";
+type AdminTab = "dashboard" | "agenda" | "clientes" | "gestor" | "config";
 
 type AppointmentStatus = "confirmado" | "pendente" | "concluido" | "cancelado";
 
@@ -500,10 +508,214 @@ function Config() {
   );
 }
 
+type PixelId = "meta" | "ga4" | "tiktok" | "gtm";
+
+type PixelConfig = {
+  id: PixelId;
+  name: string;
+  detail: string;
+  placeholder: string;
+  color: string;
+  abbr: string;
+};
+
+const pixelList: PixelConfig[] = [
+  { id: "meta", name: "Meta Pixel", detail: "Facebook & Instagram Ads", placeholder: "Ex: 1234567890123456", color: "bg-blue-600", abbr: "M" },
+  { id: "ga4", name: "Google Analytics 4", detail: "GA4 – Measurement ID", placeholder: "Ex: G-XXXXXXXXXX", color: "bg-orange-500", abbr: "G" },
+  { id: "tiktok", name: "TikTok Pixel", detail: "TikTok Ads Manager", placeholder: "Ex: C4ABCDE12345", color: "bg-black", abbr: "T" },
+  { id: "gtm", name: "Google Tag Manager", detail: "Gerenciador de tags", placeholder: "Ex: GTM-XXXXXXX", color: "bg-blue-400", abbr: "GT" },
+];
+
+const recentEvents = [
+  { name: "page_view", desc: "Visitou a página do Yvison", time: "2 min atrás" },
+  { name: "schedule_start", desc: "Iniciou um agendamento", time: "5 min atrás" },
+  { name: "schedule_complete", desc: "Concluiu agendamento – Corte", time: "8 min atrás" },
+  { name: "page_view", desc: "Visitou a página do Yvison", time: "12 min atrás" },
+  { name: "click_whatsapp", desc: "Clicou no WhatsApp", time: "18 min atrás" },
+  { name: "schedule_start", desc: "Iniciou um agendamento", time: "25 min atrás" },
+];
+
+function Gestor() {
+  const [enabled, setEnabled] = useState<Record<PixelId, boolean>>({
+    meta: true,
+    ga4: false,
+    tiktok: false,
+    gtm: true,
+  });
+  const [ids, setIds] = useState<Record<PixelId, string>>({
+    meta: "1234567890123456",
+    ga4: "",
+    tiktok: "",
+    gtm: "GTM-ABC1234",
+  });
+  const [expanded, setExpanded] = useState<PixelId | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy(value: string) {
+    navigator.clipboard.writeText(value).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  const trafficSources = [
+    { label: "Instagram", percent: 38, color: "bg-pink-500" },
+    { label: "Direto", percent: 30, color: "bg-black" },
+    { label: "Google", percent: 20, color: "bg-orange-400" },
+    { label: "TikTok", percent: 12, color: "bg-[#656565]" },
+  ];
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-bold">Gestor</h1>
+        <p className="text-sm text-[#656565]">Pixels de rastreio e métricas</p>
+      </div>
+
+      {/* Métricas */}
+      <div>
+        <p className="text-xs font-semibold text-[#656565] uppercase pb-3">Métricas — últimos 30 dias</p>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { label: "Visualizações", value: "1.247", icon: <Eye className="w-4 h-4 text-[#656565]" />, sub: "+18% vs mês ant." },
+            { label: "Agendamentos", value: "89", icon: <CheckCircle2 className="w-4 h-4 text-[#656565]" />, sub: "via link" },
+            { label: "Taxa de conv.", value: "7,1%", icon: <TrendingUp className="w-4 h-4 text-[#656565]" />, sub: "vis. → agend." },
+            { label: "Cliques", value: "234", icon: <MousePointerClick className="w-4 h-4 text-[#656565]" />, sub: "WhatsApp / CTA" },
+          ].map((m) => (
+            <div key={m.label} className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#656565] uppercase">{m.label}</span>
+                {m.icon}
+              </div>
+              <p className="text-2xl font-bold">{m.value}</p>
+              <p className="text-xs text-[#656565]">{m.sub}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Origem do tráfego */}
+      <div>
+        <p className="text-xs font-semibold text-[#656565] uppercase pb-3">Origem do tráfego</p>
+        <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3">
+          {trafficSources.map((s) => (
+            <div key={s.label} className="flex items-center gap-3">
+              <span className="text-sm font-semibold w-16 shrink-0">{s.label}</span>
+              <div className="flex-1 h-2 rounded-full bg-[#F1f1f1]">
+                <div className={`h-2 rounded-full ${s.color}`} style={{ width: `${s.percent}%` }} />
+              </div>
+              <span className="text-sm font-bold w-9 text-right shrink-0">{s.percent}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Eventos recentes */}
+      <div>
+        <p className="text-xs font-semibold text-[#656565] uppercase pb-3">Eventos recentes</p>
+        <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
+          {recentEvents.map((ev, i) => (
+            <div
+              key={i}
+              className={["flex items-center gap-3 px-4 py-3", i < recentEvents.length - 1 ? "border-b border-[#F1f1f1]" : ""].join(" ")}
+            >
+              <div className="w-7 h-7 rounded-full bg-black flex items-center justify-center shrink-0">
+                <Zap className="w-3 h-3 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold font-mono text-[#656565]">{ev.name}</p>
+                <p className="text-sm font-semibold truncate">{ev.desc}</p>
+              </div>
+              <p className="text-xs text-[#656565] shrink-0">{ev.time}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Pixels */}
+      <div>
+        <p className="text-xs font-semibold text-[#656565] uppercase pb-3">Pixels instalados</p>
+        <div className="flex flex-col gap-3">
+          {pixelList.map((pixel) => {
+            const isExpanded = expanded === pixel.id;
+            const isOn = enabled[pixel.id];
+            return (
+              <div key={pixel.id} className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setExpanded(isExpanded ? null : pixel.id)}
+                  className="w-full flex items-center gap-3 p-4 text-left"
+                >
+                  <div className={`w-9 h-9 rounded-lg ${pixel.color} flex items-center justify-center shrink-0`}>
+                    <span className="text-white text-xs font-bold">{pixel.abbr}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm">{pixel.name}</p>
+                    <p className="text-xs text-[#656565]">{pixel.detail}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-xs font-semibold ${isOn ? "text-emerald-600" : "text-[#656565]"}`}>
+                      {isOn ? "Ativo" : "Inativo"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEnabled((prev) => ({ ...prev, [pixel.id]: !prev[pixel.id] }));
+                      }}
+                    >
+                      {isOn
+                        ? <ToggleRight className="w-6 h-6 text-black" />
+                        : <ToggleLeft className="w-6 h-6 text-[#656565]" />
+                      }
+                    </button>
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <div className="px-4 pb-4 border-t border-[#F1f1f1] pt-3 flex flex-col gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+                        ID do Pixel
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={ids[pixel.id]}
+                          onChange={(e) => setIds((prev) => ({ ...prev, [pixel.id]: e.target.value }))}
+                          placeholder={pixel.placeholder}
+                          className="flex-1 rounded-full border-2 border-[#F1f1f1] bg-white px-4 py-2 text-sm font-mono focus:outline-none focus:border-black"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(ids[pixel.id])}
+                          className="w-10 h-10 rounded-full border-2 border-[#F1f1f1] bg-white flex items-center justify-center shrink-0"
+                        >
+                          {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-[#656565]" />}
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="w-full rounded-full bg-black text-white py-2.5 text-sm font-semibold"
+                    >
+                      Salvar
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const navItems: Array<{ tab: AdminTab; label: string; icon: React.ReactNode }> = [
   { tab: "dashboard", label: "Início", icon: <LayoutDashboard className="w-5 h-5" /> },
   { tab: "agenda", label: "Agenda", icon: <CalendarDays className="w-5 h-5" /> },
   { tab: "clientes", label: "Clientes", icon: <Users className="w-5 h-5" /> },
+  { tab: "gestor", label: "Gestor", icon: <BarChart2 className="w-5 h-5" /> },
   { tab: "config", label: "Config", icon: <Settings className="w-5 h-5" /> },
 ];
 
@@ -516,6 +728,7 @@ const Admin = () => {
         {activeTab === "dashboard" && <Dashboard />}
         {activeTab === "agenda" && <Agenda />}
         {activeTab === "clientes" && <Clientes />}
+        {activeTab === "gestor" && <Gestor />}
         {activeTab === "config" && <Config />}
       </div>
 

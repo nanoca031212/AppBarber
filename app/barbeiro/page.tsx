@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useStore } from "@/app/context/store";
 
 type ActiveTab = "servicos" | "horario" | "barbeiro" | "reserva";
 
@@ -187,46 +189,17 @@ function TimeSlotList({ slots, selectedSlot, onSelect }: TimeSlotListProps) {
   );
 }
 
-type Service = {
-  id: number;
-  name: string;
-  description: string;
-  price: string;
-  priceValue: number;
-};
-
-const services: Service[] = [
-  {
-    id: 1,
-    name: "Corte de Cabelo",
-    description: "Estilo personalizado com as últimas tendências.",
-    price: "R$ 50,00",
-    priceValue: 50,
-  },
-  {
-    id: 2,
-    name: "Corte de Cabelo",
-    description: "Estilo personalizado com as últimas tendências.",
-    price: "R$ 50,00",
-    priceValue: 50,
-  },
-  {
-    id: 3,
-    name: "Corte de Cabelo",
-    description: "Estilo personalizado com as últimas tendências.",
-    price: "R$ 50,00",
-    priceValue: 50,
-  },
-  {
-    id: 4,
-    name: "Corte de Cabelo",
-    description: "Estilo personalizado com as últimas tendências.",
-    price: "R$ 50,00",
-    priceValue: 50,
-  },
-];
 
 const Barbeiro = () => {
+  const searchParams = useSearchParams();
+  const { barbers, services } = useStore();
+
+  const barberId = Number(searchParams.get("id")) || barbers[0]?.id;
+  const barber = barbers.find((b) => b.id === barberId) ?? barbers[0];
+  const barberServices = barber
+    ? services.filter((s) => barber.serviceIds.includes(s.id))
+    : services;
+
   const [activeTab, setActiveTab] = useState<ActiveTab>("servicos");
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(() =>
@@ -241,10 +214,10 @@ const Barbeiro = () => {
   );
 
   const total = useMemo(() => {
-    return services
+    return barberServices
       .filter((s) => selectedServices.has(s.id))
-      .reduce((acc, s) => acc + s.priceValue, 0);
-  }, [selectedServices]);
+      .reduce((acc, s) => acc + s.price, 0);
+  }, [selectedServices, barberServices]);
 
   const tabClassName = (tab: ActiveTab) =>
     [
@@ -276,8 +249,14 @@ const Barbeiro = () => {
         <div className="pb-6 border-b border-[#E5E5E5]">
           <div className="px-5">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-black"></div>
-              <h1 className="text-xl font-bold">Yvison</h1>
+              {barber?.photo ? (
+                <img src={barber.photo} alt={barber?.name} className="w-11 h-11 rounded-full object-cover" />
+              ) : (
+                <div className="w-11 h-11 rounded-full bg-black flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">{barber?.initials}</span>
+                </div>
+              )}
+              <h1 className="text-xl font-bold">{barber?.name ?? "Barbeiro"}</h1>
             </div>
             <div className="pt-3">
               <div className="pt-2 text-[#656565] flex items-center gap-2">
@@ -285,11 +264,7 @@ const Barbeiro = () => {
                 <h1>Avenida São Sebastião, 357, São Paulo</h1>
               </div>
               <div className="pt-2 text-[#656565] flex items-center gap-2">
-                <img
-                  src="/estrela.svg"
-                  alt=""
-                  className="w-5 h-5 text-black"
-                />
+                <img src="/estrela.svg" alt="" className="w-5 h-5 text-black" />
                 <h1>5,0 (889 avaliações)</h1>
               </div>
             </div>
@@ -313,9 +288,12 @@ const Barbeiro = () => {
                 <Button
                   type="button"
                   className={tabClassName("horario")}
+                  disabled={selectedServices.size === 0}
                   onClick={() => {
-                    setActiveTab("horario");
-                    setSelectedSlot(null);
+                    if (selectedServices.size > 0) {
+                      setActiveTab("horario");
+                      setSelectedSlot(null);
+                    }
                   }}
                 >
                   Horario
@@ -323,9 +301,11 @@ const Barbeiro = () => {
                 <Button
                   type="button"
                   className={tabClassName("barbeiro")}
+                  disabled={selectedServices.size === 0 || selectedSlot === null}
                   onClick={() => {
-                    setActiveTab("barbeiro");
-                    setSelectedSlot(null);
+                    if (selectedServices.size > 0 && selectedSlot !== null) {
+                      setActiveTab("barbeiro");
+                    }
                   }}
                 >
                   Barbeiro
@@ -337,7 +317,7 @@ const Barbeiro = () => {
           <div className="px-5 pt-6">
             {activeTab === "servicos" ? (
               <div className="space-y-4 pt-3">
-                {services.map((service) => {
+                {barberServices.map((service) => {
                   const isSelected = selectedServices.has(service.id);
                   return (
                     <div
@@ -349,7 +329,13 @@ const Barbeiro = () => {
                           : "bg-[#FAFAFA] border-[#F1f1f1]",
                       ].join(" ")}
                     >
-                      <div className="size-28 shrink-0 bg-black/15 rounded-md"></div>
+                      <div className="size-28 shrink-0 bg-black/15 rounded-md overflow-hidden flex items-center justify-center">
+                        {service.photo ? (
+                          <img src={service.photo} alt={service.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-3xl">✂</span>
+                        )}
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div>
                           <h1 className="font-bold">{service.name}</h1>
@@ -359,7 +345,7 @@ const Barbeiro = () => {
                         </div>
                         <div className="flex pt-1 items-center gap-3">
                           <div className="flex-1 min-w-0">
-                            <h1 className="font-bold">{service.price}</h1>
+                            <h1 className="font-bold">R$ {service.price.toFixed(2).replace(".", ",")}</h1>
                           </div>
                           <Button
                             type="button"
@@ -373,7 +359,7 @@ const Barbeiro = () => {
                               })
                             }
                             className={[
-                              "rounded-full font-semibold py-5 px-4 shrink-0",
+                              "rounded-full font-bold py-5 px-4 shrink-0",
                               isSelected
                                 ? "bg-black text-white border border-black"
                                 : "text-black bg-white border border-black/15",
@@ -404,9 +390,9 @@ const Barbeiro = () => {
             ) : activeTab === "barbeiro" ? (
               <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 text-[#656565]">
                 <h1 className="font-semibold text-black pb-1">
-                  Sobre o Yvison
+                  Sobre {barber?.name ?? "o barbeiro"}
                 </h1>
-                <p>Barbeiro profissional com mais de 10 anos de experiência, especializado em cortes modernos e clássicos. Atende na Avenida São Sebastião, 357, São Paulo.</p>
+                <p>{barber?.description || "Barbeiro profissional."}</p>
               </div>
             ) : (
               <div className="flex flex-col gap-4">
@@ -416,7 +402,7 @@ const Barbeiro = () => {
                   <p className="text-xs font-semibold text-[#656565] uppercase">
                     Barbearia
                   </p>
-                  <p className="font-bold">Yvison</p>
+                  <p className="font-bold">{barber?.name ?? "Barbeiro"}</p>
                   <p className="text-sm text-[#656565]">
                     Avenida São Sebastião, 357, São Paulo
                   </p>
@@ -431,7 +417,7 @@ const Barbeiro = () => {
                       Nenhum serviço selecionado.
                     </p>
                   ) : (
-                    services
+                    barberServices
                       .filter((s) => selectedServices.has(s.id))
                       .map((s) => (
                         <div
@@ -439,7 +425,7 @@ const Barbeiro = () => {
                           className="flex items-center justify-between"
                         >
                           <p className="font-semibold">{s.name}</p>
-                          <p className="font-semibold">{s.price}</p>
+                          <p className="font-semibold">R$ {s.price.toFixed(2).replace(".", ",")}</p>
                         </div>
                       ))
                   )}
@@ -486,11 +472,12 @@ const Barbeiro = () => {
       {showBottomBar && (
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#E5E5E5] px-5 py-4">
           <Button
-            className="w-full rounded-full bg-black text-white font-semibold py-6 text-base"
+            className="w-full rounded-full bg-black text-white font-semibold py-6 text-base disabled:opacity-50"
+            disabled={activeTab === "horario" && selectedSlot === null}
             onClick={() => {
               if (activeTab === "servicos") {
                 setActiveTab("horario");
-              } else if (activeTab === "horario") {
+              } else if (activeTab === "horario" && selectedSlot !== null) {
                 setActiveTab("barbeiro");
               } else if (activeTab === "barbeiro") {
                 setActiveTab("reserva");

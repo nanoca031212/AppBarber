@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Cliente {
+  id        String    @id @default(cuid())
+  nome      String
+  telefone  String
+  email     String?   @unique
+  createdAt DateTime  @default(now())
+  reservas  Reserva[]
+}
+
+model Barbeiro {
+  id        String    @id @default(cuid())
+  nome      String
+  descricao String?
+  foto      String?
+  ativo     Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  reservas  Reserva[]
+}
+
+model Servico {
+  id        String           @id @default(cuid())
+  nome      String
+  descricao String?
+  preco     Float
+  duracao   Int
+  foto      String?
+  ativo     Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  reservas  ReservaServico[]
+}
+
+model Reserva {
+  id         String         @id @default(cuid())
+  clienteId  String
+  barbeiroId String
+  data       DateTime
+  horario    String
+  status     StatusReserva  @default(PENDENTE)
+  total      Float
+  createdAt  DateTime       @default(now())
+  cliente    Cliente        @relation(fields: [clienteId], references: [id])
+  barbeiro   Barbeiro       @relation(fields: [barbeiroId], references: [id])
+  servicos   ReservaServico[]
+}
+
+model ReservaServico {
+  reservaId String
+  servicoId String
+  reserva   Reserva @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+  servico   Servico @relation(fields: [servicoId], references: [id])
+
+  @@id([reservaId, servicoId])
+}
+
+enum StatusReserva {
+  PENDENTE
+  CONFIRMADO
+  CANCELADO
+  CONCLUIDO
+}

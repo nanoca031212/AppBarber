@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useStore } from "@/app/context/store";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -24,11 +25,19 @@ import {
   ToggleRight,
   Copy,
   Check,
+  Trash2,
+  Plus,
+  Pencil,
+  X,
+  UserPlus,
+  Camera,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 type AdminTab = "dashboard" | "agenda" | "clientes" | "gestor" | "config";
+
+import type { Service, Barber } from "@/app/context/store";
 
 type AppointmentStatus = "confirmado" | "pendente" | "concluido" | "cancelado";
 
@@ -54,25 +63,161 @@ type Client = {
 };
 
 const appointments: Appointment[] = [
-  { id: 1, client: "Lucas Souza", initials: "LS", service: "Corte + Barba", time: "08:00", status: "concluido", price: "R$ 80,00" },
-  { id: 2, client: "Rafael Mendes", initials: "RM", service: "Corte de Cabelo", time: "09:00", status: "concluido", price: "R$ 50,00" },
-  { id: 3, client: "João Pedro", initials: "JP", service: "Barba", time: "10:00", status: "confirmado", price: "R$ 35,00" },
-  { id: 4, client: "Carlos Lima", initials: "CL", service: "Corte de Cabelo", time: "11:00", status: "confirmado", price: "R$ 50,00" },
-  { id: 5, client: "Felipe Costa", initials: "FC", service: "Pezinho", time: "13:00", status: "pendente", price: "R$ 25,00" },
-  { id: 6, client: "André Rocha", initials: "AR", service: "Corte + Barba", time: "14:00", status: "pendente", price: "R$ 80,00" },
-  { id: 7, client: "Mateus Alves", initials: "MA", service: "Corte de Cabelo", time: "15:00", status: "cancelado", price: "R$ 50,00" },
-  { id: 8, client: "Bruno Neves", initials: "BN", service: "Barba", time: "16:00", status: "confirmado", price: "R$ 35,00" },
+  {
+    id: 1,
+    client: "Lucas Souza",
+    initials: "LS",
+    service: "Corte + Barba",
+    time: "08:00",
+    status: "concluido",
+    price: "R$ 80,00",
+  },
+  {
+    id: 2,
+    client: "Rafael Mendes",
+    initials: "RM",
+    service: "Corte de Cabelo",
+    time: "09:00",
+    status: "concluido",
+    price: "R$ 50,00",
+  },
+  {
+    id: 3,
+    client: "João Pedro",
+    initials: "JP",
+    service: "Barba",
+    time: "10:00",
+    status: "confirmado",
+    price: "R$ 35,00",
+  },
+  {
+    id: 4,
+    client: "Carlos Lima",
+    initials: "CL",
+    service: "Corte de Cabelo",
+    time: "11:00",
+    status: "confirmado",
+    price: "R$ 50,00",
+  },
+  {
+    id: 5,
+    client: "Felipe Costa",
+    initials: "FC",
+    service: "Pezinho",
+    time: "13:00",
+    status: "pendente",
+    price: "R$ 25,00",
+  },
+  {
+    id: 6,
+    client: "André Rocha",
+    initials: "AR",
+    service: "Corte + Barba",
+    time: "14:00",
+    status: "pendente",
+    price: "R$ 80,00",
+  },
+  {
+    id: 7,
+    client: "Mateus Alves",
+    initials: "MA",
+    service: "Corte de Cabelo",
+    time: "15:00",
+    status: "cancelado",
+    price: "R$ 50,00",
+  },
+  {
+    id: 8,
+    client: "Bruno Neves",
+    initials: "BN",
+    service: "Barba",
+    time: "16:00",
+    status: "confirmado",
+    price: "R$ 35,00",
+  },
 ];
 
 const clients: Client[] = [
-  { id: 1, name: "Lucas Souza", initials: "LS", phone: "(11) 99999-1111", lastVisit: "24/06/2026", totalVisits: 18, totalSpent: "R$ 1.440,00", isNew: false },
-  { id: 2, name: "Rafael Mendes", initials: "RM", phone: "(11) 99999-2222", lastVisit: "24/06/2026", totalVisits: 12, totalSpent: "R$ 600,00", isNew: false },
-  { id: 3, name: "João Pedro", initials: "JP", phone: "(11) 99999-3333", lastVisit: "20/06/2026", totalVisits: 7, totalSpent: "R$ 420,00", isNew: false },
-  { id: 4, name: "Carlos Lima", initials: "CL", phone: "(11) 99999-4444", lastVisit: "18/06/2026", totalVisits: 24, totalSpent: "R$ 1.920,00", isNew: false },
-  { id: 5, name: "Felipe Costa", initials: "FC", phone: "(11) 99999-5555", lastVisit: "15/06/2026", totalVisits: 3, totalSpent: "R$ 150,00", isNew: true },
-  { id: 6, name: "André Rocha", initials: "AR", phone: "(11) 99999-6666", lastVisit: "10/06/2026", totalVisits: 9, totalSpent: "R$ 720,00", isNew: false },
-  { id: 7, name: "Mateus Alves", initials: "MA", phone: "(11) 99999-7777", lastVisit: "05/06/2026", totalVisits: 2, totalSpent: "R$ 100,00", isNew: true },
-  { id: 8, name: "Bruno Neves", initials: "BN", phone: "(11) 99999-8888", lastVisit: "01/06/2026", totalVisits: 31, totalSpent: "R$ 2.480,00", isNew: false },
+  {
+    id: 1,
+    name: "Lucas Souza",
+    initials: "LS",
+    phone: "(11) 99999-1111",
+    lastVisit: "24/06/2026",
+    totalVisits: 18,
+    totalSpent: "R$ 1.440,00",
+    isNew: false,
+  },
+  {
+    id: 2,
+    name: "Rafael Mendes",
+    initials: "RM",
+    phone: "(11) 99999-2222",
+    lastVisit: "24/06/2026",
+    totalVisits: 12,
+    totalSpent: "R$ 600,00",
+    isNew: false,
+  },
+  {
+    id: 3,
+    name: "João Pedro",
+    initials: "JP",
+    phone: "(11) 99999-3333",
+    lastVisit: "20/06/2026",
+    totalVisits: 7,
+    totalSpent: "R$ 420,00",
+    isNew: false,
+  },
+  {
+    id: 4,
+    name: "Carlos Lima",
+    initials: "CL",
+    phone: "(11) 99999-4444",
+    lastVisit: "18/06/2026",
+    totalVisits: 24,
+    totalSpent: "R$ 1.920,00",
+    isNew: false,
+  },
+  {
+    id: 5,
+    name: "Felipe Costa",
+    initials: "FC",
+    phone: "(11) 99999-5555",
+    lastVisit: "15/06/2026",
+    totalVisits: 3,
+    totalSpent: "R$ 150,00",
+    isNew: true,
+  },
+  {
+    id: 6,
+    name: "André Rocha",
+    initials: "AR",
+    phone: "(11) 99999-6666",
+    lastVisit: "10/06/2026",
+    totalVisits: 9,
+    totalSpent: "R$ 720,00",
+    isNew: false,
+  },
+  {
+    id: 7,
+    name: "Mateus Alves",
+    initials: "MA",
+    phone: "(11) 99999-7777",
+    lastVisit: "05/06/2026",
+    totalVisits: 2,
+    totalSpent: "R$ 100,00",
+    isNew: true,
+  },
+  {
+    id: 8,
+    name: "Bruno Neves",
+    initials: "BN",
+    phone: "(11) 99999-8888",
+    lastVisit: "01/06/2026",
+    totalVisits: 31,
+    totalSpent: "R$ 2.480,00",
+    isNew: false,
+  },
 ];
 
 const weekDays = [
@@ -85,7 +230,10 @@ const weekDays = [
   { label: "Seg", day: "30", isToday: false },
 ];
 
-const statusConfig: Record<AppointmentStatus, { label: string; color: string; icon: React.ReactNode }> = {
+const statusConfig: Record<
+  AppointmentStatus,
+  { label: string; color: string; icon: React.ReactNode }
+> = {
   confirmado: {
     label: "Confirmado",
     color: "bg-emerald-50 text-emerald-700 border border-emerald-200",
@@ -111,24 +259,49 @@ const statusConfig: Record<AppointmentStatus, { label: string; color: string; ic
 function StatusPill({ status }: { status: AppointmentStatus }) {
   const cfg = statusConfig[status];
   return (
-    <span className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${cfg.color}`}>
+    <span
+      className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${cfg.color}`}
+    >
       {cfg.icon}
       {cfg.label}
     </span>
   );
 }
 
-function Avatar({ initials, size = "md" }: { initials: string; size?: "sm" | "md" | "lg" }) {
-  const sizes = { sm: "w-8 h-8 text-xs", md: "w-10 h-10 text-sm", lg: "w-14 h-14 text-base" };
+function Avatar({
+  initials,
+  src,
+  size = "md",
+}: {
+  initials: string;
+  src?: string;
+  size?: "sm" | "md" | "lg";
+}) {
+  const sizes = {
+    sm: "w-8 h-8 text-xs",
+    md: "w-10 h-10 text-sm",
+    lg: "w-14 h-14 text-base",
+  };
+  if (src) {
+    return (
+      <div className={`${sizes[size]} rounded-full overflow-hidden shrink-0`}>
+        <img src={src} alt={initials} className="w-full h-full object-cover" />
+      </div>
+    );
+  }
   return (
-    <div className={`${sizes[size]} rounded-full bg-black text-white flex items-center justify-center font-bold shrink-0`}>
+    <div
+      className={`${sizes[size]} rounded-full bg-black text-white flex items-center justify-center font-bold shrink-0`}
+    >
       {initials}
     </div>
   );
 }
 
 function Dashboard() {
-  const todayConfirmed = appointments.filter((a) => a.status === "confirmado").length;
+  const todayConfirmed = appointments.filter(
+    (a) => a.status === "confirmado",
+  ).length;
   const todayTotal = appointments.length;
 
   return (
@@ -144,7 +317,9 @@ function Dashboard() {
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656565] uppercase">Hoje</span>
+            <span className="text-xs font-semibold text-[#656565] uppercase">
+              Hoje
+            </span>
             <CalendarDays className="w-4 h-4 text-[#656565]" />
           </div>
           <p className="text-2xl font-bold">{todayTotal}</p>
@@ -152,15 +327,21 @@ function Dashboard() {
         </div>
         <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656565] uppercase">Mês</span>
+            <span className="text-xs font-semibold text-[#656565] uppercase">
+              Mês
+            </span>
             <TrendingUp className="w-4 h-4 text-[#656565]" />
           </div>
           <p className="text-2xl font-bold">R$ 3.200</p>
-          <p className="text-xs text-emerald-600 font-semibold">+12% vs mês anterior</p>
+          <p className="text-xs text-emerald-600 font-semibold">
+            +12% vs mês anterior
+          </p>
         </div>
         <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656565] uppercase">Clientes</span>
+            <span className="text-xs font-semibold text-[#656565] uppercase">
+              Clientes
+            </span>
             <Users className="w-4 h-4 text-[#656565]" />
           </div>
           <p className="text-2xl font-bold">142</p>
@@ -168,7 +349,9 @@ function Dashboard() {
         </div>
         <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656565] uppercase">Avaliação</span>
+            <span className="text-xs font-semibold text-[#656565] uppercase">
+              Avaliação
+            </span>
             <Star className="w-4 h-4 text-[#656565]" />
           </div>
           <p className="text-2xl font-bold">5,0</p>
@@ -241,14 +424,19 @@ function Dashboard() {
 
 function Agenda() {
   const [selectedDay, setSelectedDay] = useState(0);
-  const [filterStatus, setFilterStatus] = useState<AppointmentStatus | "todos">("todos");
+  const [filterStatus, setFilterStatus] = useState<AppointmentStatus | "todos">(
+    "todos",
+  );
 
   const filtered = useMemo(() => {
     if (filterStatus === "todos") return appointments;
     return appointments.filter((a) => a.status === filterStatus);
   }, [filterStatus]);
 
-  const statusFilters: Array<{ value: AppointmentStatus | "todos"; label: string }> = [
+  const statusFilters: Array<{
+    value: AppointmentStatus | "todos";
+    label: string;
+  }> = [
     { value: "todos", label: "Todos" },
     { value: "confirmado", label: "Confirmados" },
     { value: "pendente", label: "Pendentes" },
@@ -275,7 +463,9 @@ function Agenda() {
             <span className="text-xs font-semibold opacity-70">{d.label}</span>
             <span className="text-lg font-bold leading-none">{d.day}</span>
             {d.isToday && (
-              <div className={`w-1.5 h-1.5 rounded-full ${selectedDay === i ? "bg-white" : "bg-black"}`} />
+              <div
+                className={`w-1.5 h-1.5 rounded-full ${selectedDay === i ? "bg-white" : "bg-black"}`}
+              />
             )}
           </button>
         ))}
@@ -301,7 +491,9 @@ function Agenda() {
 
       <div className="flex flex-col gap-3">
         {filtered.length === 0 && (
-          <p className="text-center text-[#656565] py-8">Nenhum agendamento encontrado.</p>
+          <p className="text-center text-[#656565] py-8">
+            Nenhum agendamento encontrado.
+          </p>
         )}
         {filtered.map((apt) => (
           <div
@@ -385,7 +577,9 @@ function Clientes() {
 
       <div className="flex flex-col gap-3">
         {filtered.length === 0 && (
-          <p className="text-center text-[#656565] py-8">Nenhum cliente encontrado.</p>
+          <p className="text-center text-[#656565] py-8">
+            Nenhum cliente encontrado.
+          </p>
         )}
         {filtered.map((client) => (
           <div
@@ -431,7 +625,211 @@ function Clientes() {
   );
 }
 
+function BottomSheet({
+  open,
+  onClose,
+  title,
+  children,
+  footer,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-t-2xl flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0">
+          <h2 className="font-bold text-lg">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-[#F1f1f1]"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-5 pb-2">
+          <div className="flex flex-col gap-3">{children}</div>
+        </div>
+        {footer && (
+          <div className="px-5 pt-3 pb-24 shrink-0 border-t border-[#F1f1f1] bg-white">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const DURATION_OPTIONS = [15, 20, 30, 45, 60, 90, 120];
+
+function formatDuration(min: number) {
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m === 0 ? `${h}h` : `${h}h${m}min`;
+}
+
+function formatPrice(price: number) {
+  return `R$ ${price.toFixed(2).replace(".", ",")}`;
+}
+
+function getInitials(name: string) {
+  return name
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+}
+
 function Config() {
+  const { services, setServices, barbers, setBarbers } = useStore();
+
+  const [serviceModal, setServiceModal] = useState<{
+    open: boolean;
+    editing: Service | null;
+  }>({ open: false, editing: null });
+  const [serviceForm, setServiceForm] = useState({
+    name: "",
+    description: "",
+    duration: 30,
+    price: "",
+    photo: "",
+  });
+
+  const [barberModal, setBarberModal] = useState<{ open: boolean; editing: Barber | null }>({ open: false, editing: null });
+  const [barberForm, setBarberForm] = useState({
+    name: "",
+    description: "",
+    serviceIds: [] as number[],
+    photo: "",
+  });
+
+  function openAddService() {
+    setServiceForm({ name: "", description: "", duration: 30, price: "", photo: "" });
+    setServiceModal({ open: true, editing: null });
+  }
+
+  function openEditService(s: Service) {
+    setServiceForm({
+      name: s.name,
+      description: s.description,
+      duration: s.duration,
+      price: String(s.price),
+      photo: s.photo ?? "",
+    });
+    setServiceModal({ open: true, editing: s });
+  }
+
+  function saveService() {
+    if (!serviceForm.name.trim()) return;
+    const price = parseFloat(serviceForm.price.replace(",", ".")) || 0;
+    if (serviceModal.editing) {
+      setServices((prev) =>
+        prev.map((s) =>
+          s.id === serviceModal.editing!.id
+            ? {
+                ...s,
+                name: serviceForm.name.trim(),
+                description: serviceForm.description.trim(),
+                duration: serviceForm.duration,
+                price,
+                photo: serviceForm.photo || undefined,
+              }
+            : s,
+        ),
+      );
+    } else {
+      const newId = Math.max(0, ...services.map((s) => s.id)) + 1;
+      setServices((prev) => [
+        ...prev,
+        {
+          id: newId,
+          name: serviceForm.name.trim(),
+          description: serviceForm.description.trim(),
+          duration: serviceForm.duration,
+          price,
+          photo: serviceForm.photo || undefined,
+        },
+      ]);
+    }
+    setServiceModal({ open: false, editing: null });
+  }
+
+  function deleteService(id: number) {
+    setServices((prev) => prev.filter((s) => s.id !== id));
+    setBarbers((prev) =>
+      prev.map((b) => ({
+        ...b,
+        serviceIds: b.serviceIds.filter((sid) => sid !== id),
+      })),
+    );
+  }
+
+  function openAddBarber() {
+    setBarberForm({ name: "", description: "", serviceIds: [], photo: "" });
+    setBarberModal({ open: true, editing: null });
+  }
+
+  function openEditBarber(b: Barber) {
+    setBarberForm({ name: b.name, description: b.description, serviceIds: b.serviceIds, photo: b.photo ?? "" });
+    setBarberModal({ open: true, editing: b });
+  }
+
+  function toggleBarberService(sid: number) {
+    setBarberForm((prev) => ({
+      ...prev,
+      serviceIds: prev.serviceIds.includes(sid)
+        ? prev.serviceIds.filter((id) => id !== sid)
+        : [...prev.serviceIds, sid],
+    }));
+  }
+
+  function saveBarber() {
+    if (!barberForm.name.trim()) return;
+    if (barberModal.editing) {
+      setBarbers((prev) =>
+        prev.map((b) =>
+          b.id === barberModal.editing!.id
+            ? {
+                ...b,
+                name: barberForm.name.trim(),
+                initials: getInitials(barberForm.name),
+                description: barberForm.description.trim(),
+                serviceIds: barberForm.serviceIds,
+                photo: barberForm.photo || undefined,
+              }
+            : b,
+        ),
+      );
+    } else {
+      const newId = Math.max(0, ...barbers.map((b) => b.id)) + 1;
+      setBarbers((prev) => [
+        ...prev,
+        {
+          id: newId,
+          name: barberForm.name.trim(),
+          initials: getInitials(barberForm.name),
+          description: barberForm.description.trim(),
+          serviceIds: barberForm.serviceIds,
+          photo: barberForm.photo || undefined,
+        },
+      ]);
+    }
+    setBarberModal({ open: false, editing: null });
+  }
+
+  function deleteBarber(id: number) {
+    setBarbers((prev) => prev.filter((b) => b.id !== id));
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <h1 className="text-2xl font-bold">Configurações</h1>
@@ -450,53 +848,206 @@ function Config() {
         </button>
       </div>
 
-      {[
-        {
-          section: "Barbearia",
-          items: [
+      {/* Barbearia */}
+      <div>
+        <p className="text-xs font-semibold text-[#656565] uppercase pb-2">
+          Barbearia
+        </p>
+        <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
+          {[
             { label: "Nome da barbearia", value: "YvisonBarber" },
             { label: "Endereço", value: "Av. São Sebastião, 357" },
             { label: "Telefone", value: "(11) 99999-0000" },
-          ],
-        },
-        {
-          section: "Serviços",
-          items: [
-            { label: "Gerenciar serviços", value: "4 ativos" },
-            { label: "Horário de funcionamento", value: "08:00 – 18:00" },
-          ],
-        },
-        {
-          section: "Notificações",
-          items: [
-            { label: "Novos agendamentos", value: "Ativado" },
-            { label: "Cancelamentos", value: "Ativado" },
-          ],
-        },
-      ].map((group) => (
-        <div key={group.section}>
-          <p className="text-xs font-semibold text-[#656565] uppercase pb-2">
-            {group.section}
+          ].map((item, i, arr) => (
+            <div
+              key={item.label}
+              className={[
+                "flex items-center justify-between px-4 py-3.5",
+                i < arr.length - 1 ? "border-b border-[#F1f1f1]" : "",
+              ].join(" ")}
+            >
+              <p className="font-semibold text-sm">{item.label}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-[#656565]">{item.value}</p>
+                <ChevronRight className="w-4 h-4 text-[#656565]" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Serviços */}
+      <div>
+        <div className="flex items-center justify-between pb-2">
+          <p className="text-xs font-semibold text-[#656565] uppercase">
+            Serviços
           </p>
-          <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
-            {group.items.map((item, i) => (
-              <div
-                key={item.label}
-                className={[
-                  "flex items-center justify-between px-4 py-3.5",
-                  i < group.items.length - 1 ? "border-b border-[#F1f1f1]" : "",
-                ].join(" ")}
-              >
-                <p className="font-semibold text-sm">{item.label}</p>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-[#656565]">{item.value}</p>
-                  <ChevronRight className="w-4 h-4 text-[#656565]" />
+          <button
+            type="button"
+            onClick={openAddService}
+            className="flex items-center gap-1 rounded-full bg-black text-white px-3 py-1.5 text-xs font-semibold"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Novo
+          </button>
+        </div>
+        <div className="flex flex-col gap-2">
+          {services.length === 0 && (
+            <p className="text-center text-[#656565] text-sm py-6">
+              Nenhum serviço cadastrado.
+            </p>
+          )}
+          {services.map((s) => (
+            <div
+              key={s.id}
+              className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex items-center gap-3"
+            >
+              <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 bg-black flex items-center justify-center">
+                {s.photo ? (
+                  <img src={s.photo} alt={s.name} className="w-full h-full object-cover" />
+                ) : (
+                  <Scissors className="w-4 h-4 text-white" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm truncate">{s.name}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-[#656565] flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {formatDuration(s.duration)}
+                  </span>
+                  <span className="text-xs font-semibold text-black">
+                    {formatPrice(s.price)}
+                  </span>
+                </div>
+                {s.description && (
+                  <p className="text-xs text-[#656565] truncate mt-0.5">
+                    {s.description}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => openEditService(s)}
+                  className="w-8 h-8 rounded-full border-2 border-[#F1f1f1] bg-white flex items-center justify-center"
+                >
+                  <Pencil className="w-3.5 h-3.5 text-[#656565]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteService(s.id)}
+                  className="w-8 h-8 rounded-full border-2 border-red-100 bg-red-50 flex items-center justify-center"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Equipe */}
+      <div>
+        <div className="flex items-center justify-between pb-2">
+          <p className="text-xs font-semibold text-[#656565] uppercase">
+            Equipe
+          </p>
+          <button
+            type="button"
+            onClick={openAddBarber}
+            className="flex items-center gap-1 rounded-full bg-black text-white px-3 py-1.5 text-xs font-semibold"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            Adicionar
+          </button>
+        </div>
+        <div className="flex flex-col gap-2">
+          {barbers.length === 0 && (
+            <p className="text-center text-[#656565] text-sm py-6">
+              Nenhum barbeiro cadastrado.
+            </p>
+          )}
+          {barbers.map((b) => (
+            <div
+              key={b.id}
+              className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3"
+            >
+              <div className="flex items-center gap-3">
+                <Avatar initials={b.initials} src={b.photo} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold">{b.name}</p>
+                  {b.description && (
+                    <p className="text-xs text-[#656565] truncate">{b.description}</p>
+                  )}
+                  <p className="text-xs text-[#999] mt-0.5">
+                    {b.serviceIds.length} serviço
+                    {b.serviceIds.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => openEditBarber(b)}
+                    className="w-8 h-8 rounded-full border-2 border-[#F1f1f1] bg-white flex items-center justify-center"
+                  >
+                    <Pencil className="w-3.5 h-3.5 text-[#656565]" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteBarber(b.id)}
+                    className="w-8 h-8 rounded-full border-2 border-red-100 bg-red-50 flex items-center justify-center"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
+              {b.serviceIds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1 border-t border-[#F1f1f1]">
+                  {b.serviceIds.map((sid) => {
+                    const svc = services.find((s) => s.id === sid);
+                    return svc ? (
+                      <span
+                        key={sid}
+                        className="rounded-full bg-black text-white px-2.5 py-1 text-xs font-semibold"
+                      >
+                        {svc.name}
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
+
+      {/* Notificações */}
+      <div>
+        <p className="text-xs font-semibold text-[#656565] uppercase pb-2">
+          Notificações
+        </p>
+        <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
+          {[
+            { label: "Novos agendamentos", value: "Ativado" },
+            { label: "Cancelamentos", value: "Ativado" },
+          ].map((item, i, arr) => (
+            <div
+              key={item.label}
+              className={[
+                "flex items-center justify-between px-4 py-3.5",
+                i < arr.length - 1 ? "border-b border-[#F1f1f1]" : "",
+              ].join(" ")}
+            >
+              <p className="font-semibold text-sm">{item.label}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-[#656565]">{item.value}</p>
+                <ChevronRight className="w-4 h-4 text-[#656565]" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <button
         type="button"
@@ -504,6 +1055,225 @@ function Config() {
       >
         Sair da conta
       </button>
+
+      {/* Modal: Serviço */}
+      <BottomSheet
+        open={serviceModal.open}
+        onClose={() => setServiceModal({ open: false, editing: null })}
+        title={serviceModal.editing ? "Editar serviço" : "Novo serviço"}
+        footer={
+          <button
+            type="button"
+            onClick={saveService}
+            disabled={!serviceForm.name.trim()}
+            className="w-full rounded-full bg-black text-white py-3.5 text-sm font-semibold disabled:opacity-40"
+          >
+            Finalizar
+          </button>
+        }
+      >
+        <div className="flex justify-center pb-1">
+          <label className="relative cursor-pointer">
+            <div className="w-20 h-20 rounded-xl bg-[#F1f1f1] border-2 border-[#E0E0E0] overflow-hidden flex items-center justify-center">
+              {serviceForm.photo ? (
+                <img src={serviceForm.photo} alt="foto" className="w-full h-full object-cover" />
+              ) : (
+                <Camera className="w-7 h-7 text-[#999]" />
+              )}
+            </div>
+            <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-black border-2 border-white flex items-center justify-center">
+              <Plus className="w-3 h-3 text-white" />
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => setServiceForm((p) => ({ ...p, photo: ev.target?.result as string }));
+                reader.readAsDataURL(file);
+              }}
+            />
+          </label>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+            Nome
+          </label>
+          <input
+            type="text"
+            value={serviceForm.name}
+            onChange={(e) =>
+              setServiceForm((p) => ({ ...p, name: e.target.value }))
+            }
+            placeholder="Ex: Corte de Cabelo"
+            className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+            Descrição
+          </label>
+          <textarea
+            value={serviceForm.description}
+            onChange={(e) =>
+              setServiceForm((p) => ({ ...p, description: e.target.value }))
+            }
+            placeholder="Breve descrição do serviço"
+            rows={2}
+            className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black resize-none"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+              Duração
+            </label>
+            <select
+              value={serviceForm.duration}
+              onChange={(e) =>
+                setServiceForm((p) => ({
+                  ...p,
+                  duration: Number(e.target.value),
+                }))
+              }
+              className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black appearance-none"
+            >
+              {DURATION_OPTIONS.map((d) => (
+                <option key={d} value={d}>
+                  {formatDuration(d)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+              Preço (R$)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={serviceForm.price}
+              onChange={(e) =>
+                setServiceForm((p) => ({ ...p, price: e.target.value }))
+              }
+              placeholder="0,00"
+              className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
+            />
+          </div>
+        </div>
+      </BottomSheet>
+
+      {/* Modal: Barbeiro */}
+      <BottomSheet
+        open={barberModal.open}
+        onClose={() => setBarberModal({ open: false, editing: null })}
+        title={barberModal.editing ? "Editar barbeiro" : "Adicionar barbeiro"}
+        footer={
+          <button
+            type="button"
+            onClick={saveBarber}
+            disabled={!barberForm.name.trim()}
+            className="w-full rounded-full bg-black text-white py-3.5 text-sm font-semibold disabled:opacity-40"
+          >
+            Finalizar
+          </button>
+        }
+      >
+        <div className="flex justify-center pb-1">
+          <label className="relative cursor-pointer">
+            <div className="w-20 h-20 rounded-full bg-[#F1f1f1] border-2 border-[#E0E0E0] overflow-hidden flex items-center justify-center">
+              {barberForm.photo ? (
+                <img src={barberForm.photo} alt="foto" className="w-full h-full object-cover" />
+              ) : (
+                <Camera className="w-7 h-7 text-[#999]" />
+              )}
+            </div>
+            <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-black border-2 border-white flex items-center justify-center">
+              <Plus className="w-3 h-3 text-white" />
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => setBarberForm((p) => ({ ...p, photo: ev.target?.result as string }));
+                reader.readAsDataURL(file);
+              }}
+            />
+          </label>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+            Nome do barbeiro
+          </label>
+          <input
+            type="text"
+            value={barberForm.name}
+            onChange={(e) =>
+              setBarberForm((p) => ({ ...p, name: e.target.value }))
+            }
+            placeholder="Ex: Carlos Silva"
+            className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+            Descrição
+          </label>
+          <textarea
+            value={barberForm.description}
+            onChange={(e) => setBarberForm((p) => ({ ...p, description: e.target.value }))}
+            placeholder="Ex: Especialista em cortes modernos e barba"
+            rows={2}
+            className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black resize-none"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-[#656565] uppercase block pb-2">
+            Serviços que realiza
+          </label>
+          {services.length === 0 && (
+            <p className="text-sm text-[#656565]">
+              Nenhum serviço cadastrado ainda.
+            </p>
+          )}
+          <div className="flex flex-col gap-2">
+            {services.map((s) => {
+              const selected = barberForm.serviceIds.includes(s.id);
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => toggleBarberService(s.id)}
+                  className={[
+                    "flex items-center justify-between rounded-xl border-2 px-4 py-3 text-left",
+                    selected
+                      ? "border-black bg-black text-white"
+                      : "border-[#F1f1f1] bg-[#FAFAFA] text-black",
+                  ].join(" ")}
+                >
+                  <div>
+                    <p className="font-semibold text-sm">{s.name}</p>
+                    <p
+                      className={`text-xs ${selected ? "text-zinc-300" : "text-[#656565]"}`}
+                    >
+                      {formatDuration(s.duration)} · {formatPrice(s.price)}
+                    </p>
+                  </div>
+                  {selected && <Check className="w-4 h-4 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </BottomSheet>
     </div>
   );
 }
@@ -520,19 +1290,67 @@ type PixelConfig = {
 };
 
 const pixelList: PixelConfig[] = [
-  { id: "meta", name: "Meta Pixel", detail: "Facebook & Instagram Ads", placeholder: "Ex: 1234567890123456", color: "bg-blue-600", abbr: "M" },
-  { id: "ga4", name: "Google Analytics 4", detail: "GA4 – Measurement ID", placeholder: "Ex: G-XXXXXXXXXX", color: "bg-orange-500", abbr: "G" },
-  { id: "tiktok", name: "TikTok Pixel", detail: "TikTok Ads Manager", placeholder: "Ex: C4ABCDE12345", color: "bg-black", abbr: "T" },
-  { id: "gtm", name: "Google Tag Manager", detail: "Gerenciador de tags", placeholder: "Ex: GTM-XXXXXXX", color: "bg-blue-400", abbr: "GT" },
+  {
+    id: "meta",
+    name: "Meta Pixel",
+    detail: "Facebook & Instagram Ads",
+    placeholder: "Ex: 1234567890123456",
+    color: "bg-blue-600",
+    abbr: "M",
+  },
+  {
+    id: "ga4",
+    name: "Google Analytics 4",
+    detail: "GA4 – Measurement ID",
+    placeholder: "Ex: G-XXXXXXXXXX",
+    color: "bg-orange-500",
+    abbr: "G",
+  },
+  {
+    id: "tiktok",
+    name: "TikTok Pixel",
+    detail: "TikTok Ads Manager",
+    placeholder: "Ex: C4ABCDE12345",
+    color: "bg-black",
+    abbr: "T",
+  },
+  {
+    id: "gtm",
+    name: "Google Tag Manager",
+    detail: "Gerenciador de tags",
+    placeholder: "Ex: GTM-XXXXXXX",
+    color: "bg-blue-400",
+    abbr: "GT",
+  },
 ];
 
 const recentEvents = [
-  { name: "page_view", desc: "Visitou a página do Yvison", time: "2 min atrás" },
-  { name: "schedule_start", desc: "Iniciou um agendamento", time: "5 min atrás" },
-  { name: "schedule_complete", desc: "Concluiu agendamento – Corte", time: "8 min atrás" },
-  { name: "page_view", desc: "Visitou a página do Yvison", time: "12 min atrás" },
+  {
+    name: "page_view",
+    desc: "Visitou a página do Yvison",
+    time: "2 min atrás",
+  },
+  {
+    name: "schedule_start",
+    desc: "Iniciou um agendamento",
+    time: "5 min atrás",
+  },
+  {
+    name: "schedule_complete",
+    desc: "Concluiu agendamento – Corte",
+    time: "8 min atrás",
+  },
+  {
+    name: "page_view",
+    desc: "Visitou a página do Yvison",
+    time: "12 min atrás",
+  },
   { name: "click_whatsapp", desc: "Clicou no WhatsApp", time: "18 min atrás" },
-  { name: "schedule_start", desc: "Iniciou um agendamento", time: "25 min atrás" },
+  {
+    name: "schedule_start",
+    desc: "Iniciou um agendamento",
+    time: "25 min atrás",
+  },
 ];
 
 function Gestor() {
@@ -573,17 +1391,44 @@ function Gestor() {
 
       {/* Métricas */}
       <div>
-        <p className="text-xs font-semibold text-[#656565] uppercase pb-3">Métricas — últimos 30 dias</p>
+        <p className="text-xs font-semibold text-[#656565] uppercase pb-3">
+          Métricas — últimos 30 dias
+        </p>
         <div className="grid grid-cols-2 gap-3">
           {[
-            { label: "Visualizações", value: "1.247", icon: <Eye className="w-4 h-4 text-[#656565]" />, sub: "+18% vs mês ant." },
-            { label: "Agendamentos", value: "89", icon: <CheckCircle2 className="w-4 h-4 text-[#656565]" />, sub: "via link" },
-            { label: "Taxa de conv.", value: "7,1%", icon: <TrendingUp className="w-4 h-4 text-[#656565]" />, sub: "vis. → agend." },
-            { label: "Cliques", value: "234", icon: <MousePointerClick className="w-4 h-4 text-[#656565]" />, sub: "WhatsApp / CTA" },
+            {
+              label: "Visualizações",
+              value: "1.247",
+              icon: <Eye className="w-4 h-4 text-[#656565]" />,
+              sub: "+18% vs mês ant.",
+            },
+            {
+              label: "Agendamentos",
+              value: "89",
+              icon: <CheckCircle2 className="w-4 h-4 text-[#656565]" />,
+              sub: "via link",
+            },
+            {
+              label: "Taxa de conv.",
+              value: "7,1%",
+              icon: <TrendingUp className="w-4 h-4 text-[#656565]" />,
+              sub: "vis. → agend.",
+            },
+            {
+              label: "Cliques",
+              value: "234",
+              icon: <MousePointerClick className="w-4 h-4 text-[#656565]" />,
+              sub: "WhatsApp / CTA",
+            },
           ].map((m) => (
-            <div key={m.label} className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
+            <div
+              key={m.label}
+              className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2"
+            >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-[#656565] uppercase">{m.label}</span>
+                <span className="text-xs font-semibold text-[#656565] uppercase">
+                  {m.label}
+                </span>
                 {m.icon}
               </div>
               <p className="text-2xl font-bold">{m.value}</p>
@@ -595,15 +1440,24 @@ function Gestor() {
 
       {/* Origem do tráfego */}
       <div>
-        <p className="text-xs font-semibold text-[#656565] uppercase pb-3">Origem do tráfego</p>
+        <p className="text-xs font-semibold text-[#656565] uppercase pb-3">
+          Origem do tráfego
+        </p>
         <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3">
           {trafficSources.map((s) => (
             <div key={s.label} className="flex items-center gap-3">
-              <span className="text-sm font-semibold w-16 shrink-0">{s.label}</span>
+              <span className="text-sm font-semibold w-16 shrink-0">
+                {s.label}
+              </span>
               <div className="flex-1 h-2 rounded-full bg-[#F1f1f1]">
-                <div className={`h-2 rounded-full ${s.color}`} style={{ width: `${s.percent}%` }} />
+                <div
+                  className={`h-2 rounded-full ${s.color}`}
+                  style={{ width: `${s.percent}%` }}
+                />
               </div>
-              <span className="text-sm font-bold w-9 text-right shrink-0">{s.percent}%</span>
+              <span className="text-sm font-bold w-9 text-right shrink-0">
+                {s.percent}%
+              </span>
             </div>
           ))}
         </div>
@@ -611,18 +1465,25 @@ function Gestor() {
 
       {/* Eventos recentes */}
       <div>
-        <p className="text-xs font-semibold text-[#656565] uppercase pb-3">Eventos recentes</p>
+        <p className="text-xs font-semibold text-[#656565] uppercase pb-3">
+          Eventos recentes
+        </p>
         <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
           {recentEvents.map((ev, i) => (
             <div
               key={i}
-              className={["flex items-center gap-3 px-4 py-3", i < recentEvents.length - 1 ? "border-b border-[#F1f1f1]" : ""].join(" ")}
+              className={[
+                "flex items-center gap-3 px-4 py-3",
+                i < recentEvents.length - 1 ? "border-b border-[#F1f1f1]" : "",
+              ].join(" ")}
             >
               <div className="w-7 h-7 rounded-full bg-black flex items-center justify-center shrink-0">
                 <Zap className="w-3 h-3 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold font-mono text-[#656565]">{ev.name}</p>
+                <p className="text-xs font-bold font-mono text-[#656565]">
+                  {ev.name}
+                </p>
                 <p className="text-sm font-semibold truncate">{ev.desc}</p>
               </div>
               <p className="text-xs text-[#656565] shrink-0">{ev.time}</p>
@@ -633,43 +1494,65 @@ function Gestor() {
 
       {/* Pixels */}
       <div>
-        <p className="text-xs font-semibold text-[#656565] uppercase pb-3">Pixels instalados</p>
+        <p className="text-xs font-semibold text-[#656565] uppercase pb-3">
+          Pixels instalados
+        </p>
         <div className="flex flex-col gap-3">
           {pixelList.map((pixel) => {
             const isExpanded = expanded === pixel.id;
             const isOn = enabled[pixel.id];
             return (
-              <div key={pixel.id} className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
-                <button
-                  type="button"
+              <div
+                key={pixel.id}
+                className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden"
+              >
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setExpanded(isExpanded ? null : pixel.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setExpanded(isExpanded ? null : pixel.id);
+                    }
+                  }}
                   className="w-full flex items-center gap-3 p-4 text-left"
                 >
-                  <div className={`w-9 h-9 rounded-lg ${pixel.color} flex items-center justify-center shrink-0`}>
-                    <span className="text-white text-xs font-bold">{pixel.abbr}</span>
+                  <div
+                    className={`w-9 h-9 rounded-lg ${pixel.color} flex items-center justify-center shrink-0`}
+                  >
+                    <span className="text-white text-xs font-bold">
+                      {pixel.abbr}
+                    </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm">{pixel.name}</p>
                     <p className="text-xs text-[#656565]">{pixel.detail}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-xs font-semibold ${isOn ? "text-emerald-600" : "text-[#656565]"}`}>
+                    <span
+                      className={`text-xs font-semibold ${isOn ? "text-emerald-600" : "text-[#656565]"}`}
+                    >
                       {isOn ? "Ativo" : "Inativo"}
                     </span>
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setEnabled((prev) => ({ ...prev, [pixel.id]: !prev[pixel.id] }));
+                        setEnabled((prev) => ({
+                          ...prev,
+                          [pixel.id]: !prev[pixel.id],
+                        }));
                       }}
                     >
-                      {isOn
-                        ? <ToggleRight className="w-6 h-6 text-black" />
-                        : <ToggleLeft className="w-6 h-6 text-[#656565]" />
-                      }
+                      {isOn ? (
+                        <ToggleRight className="w-6 h-6 text-black" />
+                      ) : (
+                        <ToggleLeft className="w-6 h-6 text-[#656565]" />
+                      )}
                     </button>
                   </div>
-                </button>
+                </div>
 
                 {isExpanded && (
                   <div className="px-4 pb-4 border-t border-[#F1f1f1] pt-3 flex flex-col gap-3">
@@ -681,7 +1564,12 @@ function Gestor() {
                         <input
                           type="text"
                           value={ids[pixel.id]}
-                          onChange={(e) => setIds((prev) => ({ ...prev, [pixel.id]: e.target.value }))}
+                          onChange={(e) =>
+                            setIds((prev) => ({
+                              ...prev,
+                              [pixel.id]: e.target.value,
+                            }))
+                          }
                           placeholder={pixel.placeholder}
                           className="flex-1 rounded-full border-2 border-[#F1f1f1] bg-white px-4 py-2 text-sm font-mono focus:outline-none focus:border-black"
                         />
@@ -690,7 +1578,11 @@ function Gestor() {
                           onClick={() => handleCopy(ids[pixel.id])}
                           className="w-10 h-10 rounded-full border-2 border-[#F1f1f1] bg-white flex items-center justify-center shrink-0"
                         >
-                          {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-[#656565]" />}
+                          {copied ? (
+                            <Check className="w-4 h-4 text-emerald-600" />
+                          ) : (
+                            <Copy className="w-4 h-4 text-[#656565]" />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -711,13 +1603,22 @@ function Gestor() {
   );
 }
 
-const navItems: Array<{ tab: AdminTab; label: string; icon: React.ReactNode }> = [
-  { tab: "dashboard", label: "Início", icon: <LayoutDashboard className="w-5 h-5" /> },
-  { tab: "agenda", label: "Agenda", icon: <CalendarDays className="w-5 h-5" /> },
-  { tab: "clientes", label: "Clientes", icon: <Users className="w-5 h-5" /> },
-  { tab: "gestor", label: "Gestor", icon: <BarChart2 className="w-5 h-5" /> },
-  { tab: "config", label: "Config", icon: <Settings className="w-5 h-5" /> },
-];
+const navItems: Array<{ tab: AdminTab; label: string; icon: React.ReactNode }> =
+  [
+    {
+      tab: "dashboard",
+      label: "Início",
+      icon: <LayoutDashboard className="w-5 h-5" />,
+    },
+    {
+      tab: "agenda",
+      label: "Agenda",
+      icon: <CalendarDays className="w-5 h-5" />,
+    },
+    { tab: "clientes", label: "Clientes", icon: <Users className="w-5 h-5" /> },
+    { tab: "gestor", label: "Gestor", icon: <BarChart2 className="w-5 h-5" /> },
+    { tab: "config", label: "Config", icon: <Settings className="w-5 h-5" /> },
+  ];
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");

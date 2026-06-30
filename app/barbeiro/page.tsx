@@ -9,6 +9,8 @@ import { useStore } from "@/app/context/store";
 
 type ActiveTab = "servicos" | "horario" | "barbeiro" | "reserva";
 
+type BookingService = { name: string; price: number };
+
 function isSameDay(a: Date, b: Date) {
   return (
     a.getFullYear() === b.getFullYear() &&
@@ -192,7 +194,7 @@ function TimeSlotList({ slots, selectedSlot, onSelect }: TimeSlotListProps) {
 
 const Barbeiro = () => {
   const searchParams = useSearchParams();
-  const { barbers, services } = useStore();
+  const { barbers, services, user } = useStore();
 
   const barberId = Number(searchParams.get("id")) || barbers[0]?.id;
   const barber = barbers.find((b) => b.id === barberId) ?? barbers[0];
@@ -208,6 +210,7 @@ const Barbeiro = () => {
   const [selectedServices, setSelectedServices] = useState<Set<number>>(
     new Set(),
   );
+  const [finalizando, setFinalizando] = useState(false);
   const timeSlots = useMemo(
     () => ["08:00", "08:30", "09:00", "09:30", "10:00"],
     [],
@@ -218,6 +221,51 @@ const Barbeiro = () => {
       .filter((s) => selectedServices.has(s.id))
       .reduce((acc, s) => acc + s.price, 0);
   }, [selectedServices, barberServices]);
+
+  async function handleFinalizar() {
+    setFinalizando(true);
+    const selectedList: BookingService[] = barberServices
+      .filter((s) => selectedServices.has(s.id))
+      .map((s) => ({ name: s.name, price: s.price }));
+
+    const date = selectedDate.toLocaleDateString("pt-BR", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+
+    localStorage.setItem(
+      "pendingBooking",
+      JSON.stringify({
+        barberName: barber?.name ?? "Barbeiro",
+        services: selectedList,
+        dateIso: selectedDate.toISOString(),
+        dateLabel: date,
+        time: selectedSlot ?? "",
+        total,
+      }),
+    );
+
+    const res = await fetch("/api/checkout-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        services: selectedList,
+        barberName: barber?.name ?? "Barbeiro",
+        date,
+        time: selectedSlot ?? "",
+        successUrl: user
+          ? `${window.location.origin}/agendamentos?booked=1`
+          : `${window.location.origin}/cadastro?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: window.location.href,
+      }),
+    });
+
+    const { url } = await res.json();
+    setFinalizando(false);
+    if (url) window.location.href = url;
+  }
 
   const tabClassName = (tab: ActiveTab) =>
     [
@@ -250,13 +298,21 @@ const Barbeiro = () => {
           <div className="px-5">
             <div className="flex items-center gap-3">
               {barber?.photo ? (
-                <img src={barber.photo} alt={barber?.name} className="w-11 h-11 rounded-full object-cover" />
+                <img
+                  src={barber.photo}
+                  alt={barber?.name}
+                  className="w-11 h-11 rounded-full object-cover"
+                />
               ) : (
                 <div className="w-11 h-11 rounded-full bg-black flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">{barber?.initials}</span>
+                  <span className="text-white font-bold text-sm">
+                    {barber?.initials}
+                  </span>
                 </div>
               )}
-              <h1 className="text-xl font-bold">{barber?.name ?? "Barbeiro"}</h1>
+              <h1 className="text-xl font-bold">
+                {barber?.name ?? "Barbeiro"}
+              </h1>
             </div>
             <div className="pt-3">
               <div className="pt-2 text-[#656565] flex items-center gap-2">
@@ -301,7 +357,9 @@ const Barbeiro = () => {
                 <Button
                   type="button"
                   className={tabClassName("barbeiro")}
-                  disabled={selectedServices.size === 0 || selectedSlot === null}
+                  disabled={
+                    selectedServices.size === 0 || selectedSlot === null
+                  }
                   onClick={() => {
                     if (selectedServices.size > 0 && selectedSlot !== null) {
                       setActiveTab("barbeiro");
@@ -331,7 +389,11 @@ const Barbeiro = () => {
                     >
                       <div className="size-28 shrink-0 bg-black/15 rounded-md overflow-hidden flex items-center justify-center">
                         {service.photo ? (
-                          <img src={service.photo} alt={service.name} className="w-full h-full object-cover" />
+                          <img
+                            src={service.photo}
+                            alt={service.name}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           <span className="text-3xl">✂</span>
                         )}
@@ -345,7 +407,9 @@ const Barbeiro = () => {
                         </div>
                         <div className="flex pt-1 items-center gap-3">
                           <div className="flex-1 min-w-0">
-                            <h1 className="font-bold">R$ {service.price.toFixed(2).replace(".", ",")}</h1>
+                            <h1 className="font-bold">
+                              R$ {service.price.toFixed(2).replace(".", ",")}
+                            </h1>
                           </div>
                           <Button
                             type="button"
@@ -425,7 +489,9 @@ const Barbeiro = () => {
                           className="flex items-center justify-between"
                         >
                           <p className="font-semibold">{s.name}</p>
-                          <p className="font-semibold">R$ {s.price.toFixed(2).replace(".", ",")}</p>
+                          <p className="font-semibold">
+                            R$ {s.price.toFixed(2).replace(".", ",")}
+                          </p>
                         </div>
                       ))
                   )}
@@ -459,7 +525,7 @@ const Barbeiro = () => {
                 <button
                   type="button"
                   onClick={() => setActiveTab("servicos")}
-                  className="text-sm text-[#656565] underline text-center"
+                  className="text-sm text-[#656565] font-bold underline text-center"
                 >
                   Editar reserva
                 </button>
@@ -473,7 +539,9 @@ const Barbeiro = () => {
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#E5E5E5] px-5 py-4">
           <Button
             className="w-full rounded-full bg-black text-white font-semibold py-6 text-base disabled:opacity-50"
-            disabled={activeTab === "horario" && selectedSlot === null}
+            disabled={
+              (activeTab === "horario" && selectedSlot === null) || finalizando
+            }
             onClick={() => {
               if (activeTab === "servicos") {
                 setActiveTab("horario");
@@ -481,13 +549,20 @@ const Barbeiro = () => {
                 setActiveTab("barbeiro");
               } else if (activeTab === "barbeiro") {
                 setActiveTab("reserva");
+              } else if (activeTab === "reserva") {
+                handleFinalizar();
               }
             }}
           >
-            {activeTab === "reserva" ? "Finalizar Reserva" : "Confirmar"}
+            {activeTab === "reserva"
+              ? finalizando
+                ? "Redirecionando..."
+                : "Finalizar Reserva"
+              : "Confirmar"}
           </Button>
         </div>
       )}
+
     </div>
   );
 };

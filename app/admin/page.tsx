@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { useStore } from "@/app/context/store";
 import {
   LayoutDashboard,
@@ -32,7 +33,7 @@ import {
   UserPlus,
   Camera,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
 import { Input } from "@/components/ui/input";
 
 type AdminTab = "dashboard" | "agenda" | "clientes" | "gestor" | "config";
@@ -540,15 +541,39 @@ function Agenda() {
 
 function Clientes() {
   const [search, setSearch] = useState("");
+  const [dbClients, setDbClients] = useState<Array<{
+    id: string; nome: string; telefone: string; email: string | null; createdAt: string;
+  }>>([]);
+
+  useEffect(() => {
+    fetch("/api/clientes")
+      .then((r) => r.json())
+      .then((data) => Array.isArray(data) && setDbClients(data))
+      .catch(() => {});
+  }, []);
+
+  const allClients = [
+    ...dbClients.map((c) => ({
+      id: c.id,
+      name: c.nome,
+      initials: c.nome.trim().split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0].toUpperCase()).join(""),
+      phone: c.telefone,
+      lastVisit: new Date(c.createdAt).toLocaleDateString("pt-BR"),
+      totalVisits: 1,
+      totalSpent: "–",
+      isNew: true,
+    })),
+    ...clients.filter((c) => !dbClients.some((d) => d.telefone === c.phone)),
+  ];
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return clients;
-    return clients.filter((c) =>
+    if (!search.trim()) return allClients;
+    return allClients.filter((c) =>
       c.name.toLowerCase().includes(search.toLowerCase()),
     );
-  }, [search]);
+  }, [search, allClients]);
 
-  const newClients = clients.filter((c) => c.isNew).length;
+  const newClients = allClients.filter((c) => c.isNew).length;
 
   return (
     <div className="flex flex-col gap-5">
@@ -556,7 +581,7 @@ function Clientes() {
         <h1 className="text-2xl font-bold">Clientes</h1>
         <div className="flex gap-2">
           <div className="rounded-full bg-[#FAFAFA] border-2 border-[#F1f1f1] px-3 py-1 text-xs font-semibold">
-            {clients.length} total
+            {allClients.length} total
           </div>
           <div className="rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700">
             +{newClients} novos
@@ -704,7 +729,10 @@ function Config() {
     photo: "",
   });
 
-  const [barberModal, setBarberModal] = useState<{ open: boolean; editing: Barber | null }>({ open: false, editing: null });
+  const [barberModal, setBarberModal] = useState<{
+    open: boolean;
+    editing: Barber | null;
+  }>({ open: false, editing: null });
   const [barberForm, setBarberForm] = useState({
     name: "",
     description: "",
@@ -713,7 +741,13 @@ function Config() {
   });
 
   function openAddService() {
-    setServiceForm({ name: "", description: "", duration: 30, price: "", photo: "" });
+    setServiceForm({
+      name: "",
+      description: "",
+      duration: 30,
+      price: "",
+      photo: "",
+    });
     setServiceModal({ open: true, editing: null });
   }
 
@@ -779,7 +813,12 @@ function Config() {
   }
 
   function openEditBarber(b: Barber) {
-    setBarberForm({ name: b.name, description: b.description, serviceIds: b.serviceIds, photo: b.photo ?? "" });
+    setBarberForm({
+      name: b.name,
+      description: b.description,
+      serviceIds: b.serviceIds,
+      photo: b.photo ?? "",
+    });
     setBarberModal({ open: true, editing: b });
   }
 
@@ -904,7 +943,11 @@ function Config() {
             >
               <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 bg-black flex items-center justify-center">
                 {s.photo ? (
-                  <img src={s.photo} alt={s.name} className="w-full h-full object-cover" />
+                  <img
+                    src={s.photo}
+                    alt={s.name}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <Scissors className="w-4 h-4 text-white" />
                 )}
@@ -978,7 +1021,9 @@ function Config() {
                 <div className="flex-1 min-w-0">
                   <p className="font-bold">{b.name}</p>
                   {b.description && (
-                    <p className="text-xs text-[#656565] truncate">{b.description}</p>
+                    <p className="text-xs text-[#656565] truncate">
+                      {b.description}
+                    </p>
                   )}
                   <p className="text-xs text-[#999] mt-0.5">
                     {b.serviceIds.length} serviço
@@ -986,6 +1031,13 @@ function Config() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  <Link
+                    href={`/admin/barber/${b.id}`}
+                    className="rounded-full border-2 border-[#F1f1f1] bg-[#FAFAFA] px-3 py-1.5 text-xs font-semibold flex items-center gap-1"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    Painel
+                  </Link>
                   <button
                     type="button"
                     onClick={() => openEditBarber(b)}
@@ -1076,7 +1128,11 @@ function Config() {
           <label className="relative cursor-pointer">
             <div className="w-20 h-20 rounded-xl bg-[#F1f1f1] border-2 border-[#E0E0E0] overflow-hidden flex items-center justify-center">
               {serviceForm.photo ? (
-                <img src={serviceForm.photo} alt="foto" className="w-full h-full object-cover" />
+                <img
+                  src={serviceForm.photo}
+                  alt="foto"
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <Camera className="w-7 h-7 text-[#999]" />
               )}
@@ -1092,7 +1148,11 @@ function Config() {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 const reader = new FileReader();
-                reader.onload = (ev) => setServiceForm((p) => ({ ...p, photo: ev.target?.result as string }));
+                reader.onload = (ev) =>
+                  setServiceForm((p) => ({
+                    ...p,
+                    photo: ev.target?.result as string,
+                  }));
                 reader.readAsDataURL(file);
               }}
             />
@@ -1187,7 +1247,11 @@ function Config() {
           <label className="relative cursor-pointer">
             <div className="w-20 h-20 rounded-full bg-[#F1f1f1] border-2 border-[#E0E0E0] overflow-hidden flex items-center justify-center">
               {barberForm.photo ? (
-                <img src={barberForm.photo} alt="foto" className="w-full h-full object-cover" />
+                <img
+                  src={barberForm.photo}
+                  alt="foto"
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <Camera className="w-7 h-7 text-[#999]" />
               )}
@@ -1203,7 +1267,11 @@ function Config() {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 const reader = new FileReader();
-                reader.onload = (ev) => setBarberForm((p) => ({ ...p, photo: ev.target?.result as string }));
+                reader.onload = (ev) =>
+                  setBarberForm((p) => ({
+                    ...p,
+                    photo: ev.target?.result as string,
+                  }));
                 reader.readAsDataURL(file);
               }}
             />
@@ -1229,7 +1297,9 @@ function Config() {
           </label>
           <textarea
             value={barberForm.description}
-            onChange={(e) => setBarberForm((p) => ({ ...p, description: e.target.value }))}
+            onChange={(e) =>
+              setBarberForm((p) => ({ ...p, description: e.target.value }))
+            }
             placeholder="Ex: Especialista em cortes modernos e barba"
             rows={2}
             className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black resize-none"

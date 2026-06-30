@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useStore } from "@/app/context/store";
 
@@ -192,7 +192,7 @@ function TimeSlotList({ slots, selectedSlot, onSelect }: TimeSlotListProps) {
 }
 
 
-const Barbeiro = () => {
+const BarbeiroContent = () => {
   const searchParams = useSearchParams();
   const { barbers, services, user } = useStore();
 
@@ -566,5 +566,11 @@ const Barbeiro = () => {
     </div>
   );
 };
+
+const Barbeiro = () => (
+  <Suspense>
+    <BarbeiroContent />
+  </Suspense>
+);
 
 export default Barbeiro;

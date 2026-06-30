@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.NEXT_PUBLIC_STRIPE_SECRET_KEY!);
-
 type ServiceItem = { name: string; price: number };
 
 export async function POST(req: NextRequest) {
+  const stripe = new Stripe(process.env.NEXT_PUBLIC_STRIPE_SECRET_KEY!);
   try {
     const { services, barberName, date, time, successUrl, cancelUrl } =
       await req.json();

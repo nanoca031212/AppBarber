@@ -12,6 +12,7 @@ model Cliente {
   nome      String
   telefone  String
   email     String?   @unique
+  senha     String?
   createdAt DateTime  @default(now())
   reservas  Reserva[]
 }
@@ -66,4 +67,16 @@ enum StatusReserva {
   CONFIRMADO
   CANCELADO
   CONCLUIDO
+}
+
+model HorarioFuncionamento {
+  id                String   @id @default(cuid())
+  horaInicio        String   @default("08:00")
+  horaFim           String   @default("19:00")
+  intervalo         Int      @default(30)
+  pausaAtiva        Boolean  @default(false)
+  pausaInicio       String?
+  pausaFim          String?
+  diasFuncionamento Int[]    @default([1, 2, 3, 4, 5, 6])
+  updatedAt   DateTime @updatedAt
 }

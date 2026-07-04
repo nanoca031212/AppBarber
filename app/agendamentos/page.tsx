@@ -51,7 +51,7 @@ export default function AgendamentosPage() {
 
   useEffect(() => {
     if (!user) {
-      router.replace("/cadastro");
+      setLoading(false);
       return;
     }
 
@@ -100,7 +100,52 @@ export default function AgendamentosPage() {
 
   const confirmingAgendamento = agendamentos.find((ag) => ag.id === confirmingId);
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col pb-24">
+        <ClientBottomNav />
+
+        <div className="px-5 pt-8 pb-4 flex items-center gap-3 border-b border-[#F1f1f1]">
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            className="w-10 h-10 rounded-full bg-[#F1f1f1] flex items-center justify-center"
+          >
+            <ArrowLeftIcon className="w-4 h-4" />
+          </button>
+          <h1 className="text-xl font-bold">Meus agendamentos</h1>
+        </div>
+
+        <div className="flex flex-col items-center justify-center gap-4 py-20 text-center px-5">
+          <div className="w-16 h-16 rounded-full bg-[#F1f1f1] flex items-center justify-center">
+            <CalendarDays className="w-8 h-8 text-[#656565]" />
+          </div>
+          <div>
+            <p className="font-bold text-lg">Você não está logado</p>
+            <p className="text-sm text-[#656565] mt-1">
+              Entre na sua conta ou crie uma para ver seus agendamentos.
+            </p>
+          </div>
+          <div className="flex gap-3 w-full max-w-xs mt-2">
+            <button
+              type="button"
+              onClick={() => router.push("/entrar")}
+              className="flex-1 rounded-full border-2 border-[#F1f1f1] bg-white py-3.5 text-sm font-semibold"
+            >
+              Entrar
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/cadastro")}
+              className="flex-1 rounded-full bg-black text-white py-3.5 text-sm font-semibold"
+            >
+              Criar conta
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col pb-24">

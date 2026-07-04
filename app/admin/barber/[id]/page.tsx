@@ -36,13 +36,69 @@ type Appointment = {
 };
 
 const mockAppointments: Appointment[] = [
-  { id: 1, client: "Lucas Souza", initials: "LS", service: "Corte + Barba", time: "08:00", status: "concluido", price: "R$ 80,00" },
-  { id: 2, client: "Rafael Mendes", initials: "RM", service: "Corte de Cabelo", time: "09:00", status: "concluido", price: "R$ 50,00" },
-  { id: 3, client: "João Pedro", initials: "JP", service: "Barba", time: "10:00", status: "confirmado", price: "R$ 35,00" },
-  { id: 4, client: "Carlos Lima", initials: "CL", service: "Corte de Cabelo", time: "11:00", status: "confirmado", price: "R$ 50,00" },
-  { id: 5, client: "Felipe Costa", initials: "FC", service: "Pezinho", time: "13:00", status: "pendente", price: "R$ 25,00" },
-  { id: 6, client: "André Rocha", initials: "AR", service: "Corte + Barba", time: "14:00", status: "pendente", price: "R$ 80,00" },
-  { id: 7, client: "Mateus Alves", initials: "MA", service: "Corte de Cabelo", time: "15:00", status: "cancelado", price: "R$ 50,00" },
+  {
+    id: 1,
+    client: "Lucas Souza",
+    initials: "LS",
+    service: "Corte + Barba",
+    time: "08:00",
+    status: "concluido",
+    price: "R$ 80,00",
+  },
+  {
+    id: 2,
+    client: "Rafael Mendes",
+    initials: "RM",
+    service: "Corte de Cabelo",
+    time: "09:00",
+    status: "concluido",
+    price: "R$ 50,00",
+  },
+  {
+    id: 3,
+    client: "João Pedro",
+    initials: "JP",
+    service: "Barba",
+    time: "10:00",
+    status: "confirmado",
+    price: "R$ 35,00",
+  },
+  {
+    id: 4,
+    client: "Carlos Lima",
+    initials: "CL",
+    service: "Corte de Cabelo",
+    time: "11:00",
+    status: "confirmado",
+    price: "R$ 50,00",
+  },
+  {
+    id: 5,
+    client: "Felipe Costa",
+    initials: "FC",
+    service: "Pezinho",
+    time: "13:00",
+    status: "pendente",
+    price: "R$ 25,00",
+  },
+  {
+    id: 6,
+    client: "André Rocha",
+    initials: "AR",
+    service: "Corte + Barba",
+    time: "14:00",
+    status: "pendente",
+    price: "R$ 80,00",
+  },
+  {
+    id: 7,
+    client: "Mateus Alves",
+    initials: "MA",
+    service: "Corte de Cabelo",
+    time: "15:00",
+    status: "cancelado",
+    price: "R$ 50,00",
+  },
 ];
 
 const weekDays = [
@@ -55,25 +111,59 @@ const weekDays = [
   { label: "Seg", day: "30", isToday: false },
 ];
 
-const statusConfig: Record<AppointmentStatus, { label: string; color: string; icon: React.ReactNode }> = {
-  confirmado: { label: "Confirmado", color: "bg-emerald-50 text-emerald-700 border border-emerald-200", icon: <CheckCircle2 className="w-3 h-3" /> },
-  pendente: { label: "Pendente", color: "bg-amber-50 text-amber-700 border border-amber-200", icon: <AlertCircle className="w-3 h-3" /> },
-  concluido: { label: "Concluído", color: "bg-[#FAFAFA] text-[#656565] border border-[#F1f1f1]", icon: <CheckCircle2 className="w-3 h-3" /> },
-  cancelado: { label: "Cancelado", color: "bg-red-50 text-red-600 border border-red-200", icon: <XCircle className="w-3 h-3" /> },
+const statusConfig: Record<
+  AppointmentStatus,
+  { label: string; color: string; icon: React.ReactNode }
+> = {
+  confirmado: {
+    label: "Confirmado",
+    color: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    icon: <CheckCircle2 className="w-3 h-3" />,
+  },
+  pendente: {
+    label: "Pendente",
+    color: "bg-amber-50 text-amber-700 border border-amber-200",
+    icon: <AlertCircle className="w-3 h-3" />,
+  },
+  concluido: {
+    label: "Concluído",
+    color: "bg-[#FAFAFA] text-[#656565] border border-[#F1f1f1]",
+    icon: <CheckCircle2 className="w-3 h-3" />,
+  },
+  cancelado: {
+    label: "Cancelado",
+    color: "bg-red-50 text-red-600 border border-red-200",
+    icon: <XCircle className="w-3 h-3" />,
+  },
 };
 
 function StatusPill({ status }: { status: AppointmentStatus }) {
   const cfg = statusConfig[status];
   return (
-    <span className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${cfg.color}`}>
+    <span
+      className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${cfg.color}`}
+    >
       {cfg.icon}
       {cfg.label}
     </span>
   );
 }
 
-function Avatar({ initials, src, size = "md" }: { initials: string; src?: string; size?: "sm" | "md" | "lg" | "xl" }) {
-  const sizes = { sm: "w-8 h-8 text-xs", md: "w-10 h-10 text-sm", lg: "w-14 h-14 text-base", xl: "w-20 h-20 text-xl" };
+function Avatar({
+  initials,
+  src,
+  size = "md",
+}: {
+  initials: string;
+  src?: string;
+  size?: "sm" | "md" | "lg" | "xl";
+}) {
+  const sizes = {
+    sm: "w-8 h-8 text-xs",
+    md: "w-10 h-10 text-sm",
+    lg: "w-14 h-14 text-base",
+    xl: "w-20 h-20 text-xl",
+  };
   if (src) {
     return (
       <div className={`${sizes[size]} rounded-full overflow-hidden shrink-0`}>
@@ -82,26 +172,44 @@ function Avatar({ initials, src, size = "md" }: { initials: string; src?: string
     );
   }
   return (
-    <div className={`${sizes[size]} rounded-full bg-black text-white flex items-center justify-center font-bold shrink-0`}>
+    <div
+      className={`${sizes[size]} rounded-full bg-black text-white flex items-center justify-center font-bold shrink-0`}
+    >
       {initials}
     </div>
   );
 }
 
 function getInitials(name: string) {
-  return name.trim().split(" ").filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+  return name
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
 }
 
 function Dashboard({ barberId }: { barberId: string }) {
   const { barbers, services } = useStore();
   const barber = barbers.find((b) => String(b.id) === barberId);
 
-  const todayConfirmed = mockAppointments.filter((a) => a.status === "confirmado").length;
-  const todayDone = mockAppointments.filter((a) => a.status === "concluido").length;
-  const todayTotal = mockAppointments.filter((a) => a.status !== "cancelado").length;
+  const todayConfirmed = mockAppointments.filter(
+    (a) => a.status === "confirmado",
+  ).length;
+  const todayDone = mockAppointments.filter(
+    (a) => a.status === "concluido",
+  ).length;
+  const todayTotal = mockAppointments.filter(
+    (a) => a.status !== "cancelado",
+  ).length;
   const todayRevenue = mockAppointments
     .filter((a) => a.status === "concluido")
-    .reduce((acc, a) => acc + parseFloat(a.price.replace("R$ ", "").replace(",", ".")), 0);
+    .reduce(
+      (acc, a) =>
+        acc + parseFloat(a.price.replace("R$ ", "").replace(",", ".")),
+      0,
+    );
 
   const barberServices = barber
     ? services.filter((s) => barber.serviceIds.includes(s.id))
@@ -118,17 +226,21 @@ function Dashboard({ barberId }: { barberId: string }) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
         <p className="text-[#656565]">Barbeiro não encontrado.</p>
-        <Link href="/admin" className="text-sm font-semibold underline">Voltar ao admin</Link>
+        <Link href="/admin" className="text-sm font-semibold underline">
+          Voltar ao admin
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 ">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-[#656565] text-sm">Terça-feira, 24 de junho</p>
-          <h1 className="text-2xl font-bold">Olá, {barber.name.split(" ")[0]}</h1>
+          <h1 className="text-2xl font-bold">
+            Olá, {barber.name.split(" ")[0]}
+          </h1>
         </div>
         <Avatar initials={barber.initials} src={barber.photo} size="lg" />
       </div>
@@ -136,7 +248,9 @@ function Dashboard({ barberId }: { barberId: string }) {
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656565] uppercase">Hoje</span>
+            <span className="text-xs font-semibold text-[#656565] uppercase">
+              Hoje
+            </span>
             <CalendarDays className="w-4 h-4 text-[#656565]" />
           </div>
           <p className="text-2xl font-bold">{todayTotal}</p>
@@ -144,7 +258,9 @@ function Dashboard({ barberId }: { barberId: string }) {
         </div>
         <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656565] uppercase">Receita hoje</span>
+            <span className="text-xs font-semibold text-[#656565] uppercase">
+              Receita hoje
+            </span>
             <TrendingUp className="w-4 h-4 text-[#656565]" />
           </div>
           <p className="text-2xl font-bold">R$ {todayRevenue.toFixed(0)}</p>
@@ -152,15 +268,21 @@ function Dashboard({ barberId }: { barberId: string }) {
         </div>
         <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656565] uppercase">Mês</span>
+            <span className="text-xs font-semibold text-[#656565] uppercase">
+              Mês
+            </span>
             <TrendingUp className="w-4 h-4 text-[#656565]" />
           </div>
           <p className="text-2xl font-bold">R$ 3.200</p>
-          <p className="text-xs text-emerald-600 font-semibold">+12% vs mês anterior</p>
+          <p className="text-xs text-emerald-600 font-semibold">
+            +12% vs mês anterior
+          </p>
         </div>
         <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656565] uppercase">Avaliação</span>
+            <span className="text-xs font-semibold text-[#656565] uppercase">
+              Avaliação
+            </span>
             <Star className="w-4 h-4 text-[#656565]" />
           </div>
           <p className="text-2xl font-bold">5,0</p>
@@ -177,7 +299,10 @@ function Dashboard({ barberId }: { barberId: string }) {
             .filter((a) => a.status === "confirmado" || a.status === "pendente")
             .slice(0, 4)
             .map((apt) => (
-              <div key={apt.id} className="flex items-center gap-3 rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-3">
+              <div
+                key={apt.id}
+                className="flex items-center gap-3 rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-3"
+              >
                 <Avatar initials={apt.initials} />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold truncate">{apt.client}</p>
@@ -211,7 +336,10 @@ function Dashboard({ barberId }: { barberId: string }) {
                         <p className="text-xs text-[#656565]">{s.count}x</p>
                       </div>
                       <div className="h-1.5 rounded-full bg-[#F1f1f1]">
-                        <div className="h-1.5 rounded-full bg-black" style={{ width: `${s.percent}%` }} />
+                        <div
+                          className="h-1.5 rounded-full bg-black"
+                          style={{ width: `${s.percent}%` }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -223,7 +351,10 @@ function Dashboard({ barberId }: { barberId: string }) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold">{s.name}</p>
-                      <p className="text-xs text-[#656565]">{s.duration} min · R$ {s.price.toFixed(2).replace(".", ",")}</p>
+                      <p className="text-xs text-[#656565]">
+                        {s.duration} min · R${" "}
+                        {s.price.toFixed(2).replace(".", ",")}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -236,14 +367,19 @@ function Dashboard({ barberId }: { barberId: string }) {
 
 function Agenda() {
   const [selectedDay, setSelectedDay] = useState(0);
-  const [filterStatus, setFilterStatus] = useState<AppointmentStatus | "todos">("todos");
+  const [filterStatus, setFilterStatus] = useState<AppointmentStatus | "todos">(
+    "todos",
+  );
 
   const filtered = useMemo(() => {
     if (filterStatus === "todos") return mockAppointments;
     return mockAppointments.filter((a) => a.status === filterStatus);
   }, [filterStatus]);
 
-  const statusFilters: Array<{ value: AppointmentStatus | "todos"; label: string }> = [
+  const statusFilters: Array<{
+    value: AppointmentStatus | "todos";
+    label: string;
+  }> = [
     { value: "todos", label: "Todos" },
     { value: "confirmado", label: "Confirmados" },
     { value: "pendente", label: "Pendentes" },
@@ -262,13 +398,17 @@ function Agenda() {
             onClick={() => setSelectedDay(i)}
             className={[
               "flex flex-col items-center gap-1 rounded-xl border-2 px-3 py-2 shrink-0 min-w-[52px]",
-              selectedDay === i ? "bg-black text-white border-black" : "bg-[#FAFAFA] text-black border-[#F1f1f1]",
+              selectedDay === i
+                ? "bg-black text-white border-black"
+                : "bg-[#FAFAFA] text-black border-[#F1f1f1]",
             ].join(" ")}
           >
             <span className="text-xs font-semibold opacity-70">{d.label}</span>
             <span className="text-lg font-bold leading-none">{d.day}</span>
             {d.isToday && (
-              <div className={`w-1.5 h-1.5 rounded-full ${selectedDay === i ? "bg-white" : "bg-black"}`} />
+              <div
+                className={`w-1.5 h-1.5 rounded-full ${selectedDay === i ? "bg-white" : "bg-black"}`}
+              />
             )}
           </button>
         ))}
@@ -282,7 +422,9 @@ function Agenda() {
             onClick={() => setFilterStatus(f.value)}
             className={[
               "rounded-full border-2 px-4 py-2 text-sm font-semibold shrink-0",
-              filterStatus === f.value ? "bg-black text-white border-black" : "bg-[#FAFAFA] text-[#656565] border-[#F1f1f1]",
+              filterStatus === f.value
+                ? "bg-black text-white border-black"
+                : "bg-[#FAFAFA] text-[#656565] border-[#F1f1f1]",
             ].join(" ")}
           >
             {f.label}
@@ -292,10 +434,15 @@ function Agenda() {
 
       <div className="flex flex-col gap-3">
         {filtered.length === 0 && (
-          <p className="text-center text-[#656565] py-8">Nenhum agendamento encontrado.</p>
+          <p className="text-center text-[#656565] py-8">
+            Nenhum agendamento encontrado.
+          </p>
         )}
         {filtered.map((apt) => (
-          <div key={apt.id} className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3">
+          <div
+            key={apt.id}
+            className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3"
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1 text-sm font-semibold text-[#656565]">
                 <Clock className="w-4 h-4" />
@@ -313,10 +460,16 @@ function Agenda() {
             </div>
             {(apt.status === "confirmado" || apt.status === "pendente") && (
               <div className="flex gap-2 pt-1 border-t border-[#F1f1f1]">
-                <button type="button" className="flex-1 rounded-full border-2 border-[#F1f1f1] bg-white py-2 text-sm font-semibold text-red-500">
+                <button
+                  type="button"
+                  className="flex-1 rounded-full border-2 border-[#F1f1f1] bg-white py-2 text-sm font-semibold text-red-500"
+                >
                   Cancelar
                 </button>
-                <button type="button" className="flex-1 rounded-full bg-black text-white py-2 text-sm font-semibold">
+                <button
+                  type="button"
+                  className="flex-1 rounded-full bg-black text-white py-2 text-sm font-semibold"
+                >
                   Concluir
                 </button>
               </div>
@@ -347,7 +500,9 @@ function Perfil({ barberId }: { barberId: string }) {
     );
   }
 
-  const barberServices = services.filter((s) => barber.serviceIds.includes(s.id));
+  const barberServices = services.filter((s) =>
+    barber.serviceIds.includes(s.id),
+  );
 
   function handleSave() {
     if (!form.name.trim()) return;
@@ -377,9 +532,16 @@ function Perfil({ barberId }: { barberId: string }) {
         <label className="relative cursor-pointer">
           <div className="w-24 h-24 rounded-full bg-[#F1f1f1] border-2 border-[#E0E0E0] overflow-hidden flex items-center justify-center">
             {form.photo ? (
-              <img src={form.photo} alt="foto" className="w-full h-full object-cover" />
+              <img
+                src={form.photo}
+                alt="foto"
+                className="w-full h-full object-cover"
+              />
             ) : (
-              <Avatar initials={getInitials(form.name || barber.initials)} size="xl" />
+              <Avatar
+                initials={getInitials(form.name || barber.initials)}
+                size="xl"
+              />
             )}
           </div>
           <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-black border-2 border-white flex items-center justify-center">
@@ -393,7 +555,8 @@ function Perfil({ barberId }: { barberId: string }) {
               const file = e.target.files?.[0];
               if (!file) return;
               const reader = new FileReader();
-              reader.onload = (ev) => setForm((p) => ({ ...p, photo: ev.target?.result as string }));
+              reader.onload = (ev) =>
+                setForm((p) => ({ ...p, photo: ev.target?.result as string }));
               reader.readAsDataURL(file);
             }}
           />
@@ -404,7 +567,9 @@ function Perfil({ barberId }: { barberId: string }) {
       {/* Campos */}
       <div className="flex flex-col gap-4">
         <div>
-          <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">Nome</label>
+          <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+            Nome
+          </label>
           <input
             type="text"
             value={form.name}
@@ -414,10 +579,14 @@ function Perfil({ barberId }: { barberId: string }) {
           />
         </div>
         <div>
-          <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">Descrição</label>
+          <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+            Descrição
+          </label>
           <textarea
             value={form.description}
-            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, description: e.target.value }))
+            }
             placeholder="Fale um pouco sobre você..."
             rows={3}
             className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black resize-none"
@@ -428,21 +597,30 @@ function Perfil({ barberId }: { barberId: string }) {
       {/* Serviços */}
       {barberServices.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-[#656565] uppercase pb-2">Serviços que realizo</p>
+          <p className="text-xs font-semibold text-[#656565] uppercase pb-2">
+            Serviços que realizo
+          </p>
           <div className="flex flex-wrap gap-2">
             {barberServices.map((s) => (
-              <span key={s.id} className="rounded-full bg-black text-white px-3 py-1.5 text-xs font-semibold">
+              <span
+                key={s.id}
+                className="rounded-full bg-black text-white px-3 py-1.5 text-xs font-semibold"
+              >
                 {s.name}
               </span>
             ))}
           </div>
-          <p className="text-xs text-[#656565] mt-2">Para alterar os serviços, acesse o painel admin.</p>
+          <p className="text-xs text-[#656565] mt-2">
+            Para alterar os serviços, acesse o painel admin.
+          </p>
         </div>
       )}
 
       {/* Estatísticas rápidas */}
       <div>
-        <p className="text-xs font-semibold text-[#656565] uppercase pb-2">Estatísticas</p>
+        <p className="text-xs font-semibold text-[#656565] uppercase pb-2">
+          Estatísticas
+        </p>
         <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
           {[
             { label: "Cortes este mês", value: "64" },
@@ -452,7 +630,10 @@ function Perfil({ barberId }: { barberId: string }) {
           ].map((item, i, arr) => (
             <div
               key={item.label}
-              className={["flex items-center justify-between px-4 py-3.5", i < arr.length - 1 ? "border-b border-[#F1f1f1]" : ""].join(" ")}
+              className={[
+                "flex items-center justify-between px-4 py-3.5",
+                i < arr.length - 1 ? "border-b border-[#F1f1f1]" : "",
+              ].join(" ")}
             >
               <p className="text-sm font-semibold">{item.label}</p>
               <p className="text-sm font-bold">{item.value}</p>
@@ -485,13 +666,29 @@ function Perfil({ barberId }: { barberId: string }) {
   );
 }
 
-const navItems: Array<{ tab: BarberTab; label: string; icon: React.ReactNode }> = [
-  { tab: "dashboard", label: "Início", icon: <LayoutDashboard className="w-5 h-5" /> },
-  { tab: "agenda", label: "Agenda", icon: <CalendarDays className="w-5 h-5" /> },
+const navItems: Array<{
+  tab: BarberTab;
+  label: string;
+  icon: React.ReactNode;
+}> = [
+  {
+    tab: "dashboard",
+    label: "Início",
+    icon: <LayoutDashboard className="w-5 h-5" />,
+  },
+  {
+    tab: "agenda",
+    label: "Agenda",
+    icon: <CalendarDays className="w-5 h-5" />,
+  },
   { tab: "perfil", label: "Perfil", icon: <User className="w-5 h-5" /> },
 ];
 
-export default function BarberPage({ params }: { params: Promise<{ id: string }> }) {
+export default function BarberPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const [activeTab, setActiveTab] = useState<BarberTab>("dashboard");
 
@@ -523,13 +720,23 @@ export default function BarberPage({ params }: { params: Promise<{ id: string }>
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab)}
-              className={["flex-1 flex flex-col items-center gap-1 py-3 transition-colors", activeTab === tab ? "text-black" : "text-[#656565]"].join(" ")}
+              className={[
+                "flex-1 flex flex-col items-center gap-1 py-3 transition-colors",
+                activeTab === tab ? "text-black" : "text-[#656565]",
+              ].join(" ")}
             >
               {icon}
-              <span className={["text-xs font-semibold", activeTab === tab ? "text-black" : "text-[#656565]"].join(" ")}>
+              <span
+                className={[
+                  "text-xs font-semibold",
+                  activeTab === tab ? "text-black" : "text-[#656565]",
+                ].join(" ")}
+              >
                 {label}
               </span>
-              {activeTab === tab && <div className="w-1 h-1 rounded-full bg-black" />}
+              {activeTab === tab && (
+                <div className="w-1 h-1 rounded-full bg-black" />
+              )}
             </button>
           ))}
         </div>

@@ -1,7 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowLeftIcon, Camera, Check, LogOut, Pencil, User, X } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  Camera,
+  Check,
+  LogOut,
+  Pencil,
+  User,
+  X,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import { useStore } from "@/app/context/store";
 import ClientBottomNav from "@/app/components/client-bottom-nav";
@@ -46,7 +54,12 @@ export default function PerfilPage() {
       setErro("Nome e email são obrigatórios");
       return;
     }
-    setUser({ ...user, name: nome.trim(), email: email.trim(), phone: telefone.trim() });
+    setUser({
+      ...user,
+      name: nome.trim(),
+      email: email.trim(),
+      phone: telefone.trim(),
+    });
     setEditing(false);
     setErro(null);
   }
@@ -78,13 +91,25 @@ export default function PerfilPage() {
               Faça login ou crie uma conta para acessar seu perfil.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => router.push("/cadastro")}
-            className="rounded-full bg-black text-white px-8 py-3.5 text-sm font-semibold"
-          >
-            Criar conta / Entrar
-          </button>
+          <div className="flex gap-3 w-full max-w-xs mt-2">
+            {" "}
+            <button
+              type="button"
+              onClick={() => router.push("/entrar")}
+              className="flex-1 rounded-full border-2 border-[#F1f1f1] bg-white py-3.5 text-sm font-semibold"
+            >
+              {" "}
+              Entrar{" "}
+            </button>{" "}
+            <button
+              type="button"
+              onClick={() => router.push("/cadastro")}
+              className="flex-1 rounded-full bg-black text-white py-3.5 text-sm font-semibold"
+            >
+              {" "}
+              Criar conta{" "}
+            </button>{" "}
+          </div>
         </div>
       </div>
     );
@@ -114,7 +139,11 @@ export default function PerfilPage() {
         >
           <div className="w-24 h-24 rounded-full bg-black overflow-hidden flex items-center justify-center">
             {user.photo ? (
-              <img src={user.photo} alt={user.name} className="w-full h-full object-cover" />
+              <img
+                src={user.photo}
+                alt={user.name}
+                className="w-full h-full object-cover"
+              />
             ) : (
               <Camera className="w-8 h-8 text-white" />
             )}
@@ -144,7 +173,9 @@ export default function PerfilPage() {
             <p className="font-bold text-sm">Editar informações</p>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-[#656565] uppercase">Nome</label>
+              <label className="text-xs font-semibold text-[#656565] uppercase">
+                Nome
+              </label>
               <input
                 type="text"
                 value={nome}
@@ -155,7 +186,9 @@ export default function PerfilPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-[#656565] uppercase">Email</label>
+              <label className="text-xs font-semibold text-[#656565] uppercase">
+                Email
+              </label>
               <input
                 type="email"
                 value={email}
@@ -166,7 +199,9 @@ export default function PerfilPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-[#656565] uppercase">Telefone</label>
+              <label className="text-xs font-semibold text-[#656565] uppercase">
+                Telefone
+              </label>
               <input
                 type="tel"
                 value={telefone}

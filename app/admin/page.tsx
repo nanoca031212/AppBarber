@@ -10,6 +10,7 @@ import {
   Settings,
   Search,
   ChevronRight,
+  ChevronLeft,
   Star,
   TrendingUp,
   Clock,
@@ -306,7 +307,7 @@ function Dashboard() {
   const todayTotal = appointments.length;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 lg:max-w-4xl xl:max-w-7xl lg:mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-[#656565] text-sm">Terça-feira, 24 de junho</p>
@@ -315,7 +316,7 @@ function Dashboard() {
         <Avatar initials="YV" size="lg" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[#656565] uppercase">
@@ -360,79 +361,208 @@ function Dashboard() {
         </div>
       </div>
 
-      <div>
-        <div className="flex items-center justify-between pb-3">
-          <h2 className="font-bold">Próximos agendamentos</h2>
-        </div>
-        <div className="flex flex-col gap-3">
-          {appointments
-            .filter((a) => a.status === "confirmado" || a.status === "pendente")
-            .slice(0, 4)
-            .map((apt) => (
-              <div
-                key={apt.id}
-                className="flex items-center gap-3 rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-3"
-              >
-                <Avatar initials={apt.initials} />
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold truncate">{apt.client}</p>
-                  <p className="text-xs text-[#656565]">{apt.service}</p>
-                </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
-                  <div className="flex items-center gap-1 text-xs font-semibold text-[#656565]">
-                    <Clock className="w-3 h-3" />
-                    {apt.time}
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6">
+        <div>
+          <div className="flex items-center justify-between pb-3">
+            <h2 className="font-bold">Próximos agendamentos</h2>
+          </div>
+          <div className="flex flex-col gap-3">
+            {appointments
+              .filter(
+                (a) => a.status === "confirmado" || a.status === "pendente",
+              )
+              .slice(0, 4)
+              .map((apt) => (
+                <div
+                  key={apt.id}
+                  className="flex items-center gap-3 rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-3"
+                >
+                  <Avatar initials={apt.initials} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold truncate">{apt.client}</p>
+                    <p className="text-xs text-[#656565]">{apt.service}</p>
                   </div>
-                  <StatusPill status={apt.status} />
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <div className="flex items-center gap-1 text-xs font-semibold text-[#656565]">
+                      <Clock className="w-3 h-3" />
+                      {apt.time}
+                    </div>
+                    <StatusPill status={apt.status} />
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        <div className="mt-5 lg:mt-0">
+          <h2 className="font-bold pb-3">Serviços mais populares</h2>
+          <div className="flex flex-col gap-2">
+            {[
+              { name: "Corte de Cabelo", count: 48, percent: 80 },
+              { name: "Corte + Barba", count: 31, percent: 52 },
+              { name: "Barba", count: 20, percent: 33 },
+              { name: "Pezinho", count: 9, percent: 15 },
+            ].map((s) => (
+              <div key={s.name} className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-[#FAFAFA] border-2 border-[#F1f1f1] flex items-center justify-center shrink-0">
+                  <Scissors className="w-3.5 h-3.5 text-[#656565]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between mb-1">
+                    <p className="text-sm font-semibold">{s.name}</p>
+                    <p className="text-xs text-[#656565]">{s.count}x</p>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-[#F1f1f1]">
+                    <div
+                      className="h-1.5 rounded-full bg-black"
+                      style={{ width: `${s.percent}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             ))}
-        </div>
-      </div>
-
-      <div>
-        <h2 className="font-bold pb-3">Serviços mais populares</h2>
-        <div className="flex flex-col gap-2">
-          {[
-            { name: "Corte de Cabelo", count: 48, percent: 80 },
-            { name: "Corte + Barba", count: 31, percent: 52 },
-            { name: "Barba", count: 20, percent: 33 },
-            { name: "Pezinho", count: 9, percent: 15 },
-          ].map((s) => (
-            <div key={s.name} className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#FAFAFA] border-2 border-[#F1f1f1] flex items-center justify-center shrink-0">
-                <Scissors className="w-3.5 h-3.5 text-[#656565]" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between mb-1">
-                  <p className="text-sm font-semibold">{s.name}</p>
-                  <p className="text-xs text-[#656565]">{s.count}x</p>
-                </div>
-                <div className="h-1.5 rounded-full bg-[#F1f1f1]">
-                  <div
-                    className="h-1.5 rounded-full bg-black"
-                    style={{ width: `${s.percent}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
+type ReservaStatus = "PENDENTE" | "CONFIRMADO" | "CANCELADO" | "CONCLUIDO";
+
+type ReservaApi = {
+  id: string;
+  data: string;
+  horario: string;
+  total: number;
+  status: ReservaStatus;
+  cliente: { nome: string };
+  barbeiro: { nome: string };
+  servicos: Array<{ servico: { nome: string; preco: number } }>;
+};
+
+function toAppointmentStatus(status: ReservaStatus): AppointmentStatus {
+  return status.toLowerCase() as AppointmentStatus;
+}
+
+function sameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function startOfDay(date: Date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function startOfWeek(date: Date) {
+  const d = startOfDay(date);
+  const day = (d.getDay() + 6) % 7; // segunda-feira = 0
+  d.setDate(d.getDate() - day);
+  return d;
+}
+
+const weekDayLabels = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+const monthLabels = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+
 function Agenda() {
-  const [selectedDay, setSelectedDay] = useState(0);
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const [reservas, setReservas] = useState<ReservaApi[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"semana" | "mes">("semana");
+  const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(today));
+  const [monthAnchor, setMonthAnchor] = useState(
+    () => new Date(today.getFullYear(), today.getMonth(), 1),
+  );
+  const [selectedDate, setSelectedDate] = useState(today);
   const [filterStatus, setFilterStatus] = useState<AppointmentStatus | "todos">(
     "todos",
   );
 
-  const filtered = useMemo(() => {
-    if (filterStatus === "todos") return appointments;
-    return appointments.filter((a) => a.status === filterStatus);
-  }, [filterStatus]);
+  useEffect(() => {
+    fetch("/api/reservas")
+      .then((r) => r.json())
+      .then((data) => Array.isArray(data) && setReservas(data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const reservasByDay = useMemo(() => {
+    const map = new Map<string, ReservaApi[]>();
+    for (const r of reservas) {
+      const key = startOfDay(new Date(r.data)).toDateString();
+      const arr = map.get(key) ?? [];
+      arr.push(r);
+      map.set(key, arr);
+    }
+    return map;
+  }, [reservas]);
+
+  const weekDays = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(weekAnchor);
+        d.setDate(d.getDate() + i);
+        return d;
+      }),
+    [weekAnchor],
+  );
+
+  const monthGrid = useMemo(() => {
+    const year = monthAnchor.getFullYear();
+    const month = monthAnchor.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    const leading = (firstDay.getDay() + 6) % 7;
+    const totalCells = Math.ceil((leading + lastDate) / 7) * 7;
+    return Array.from({ length: totalCells }, (_, i) => {
+      const dayNum = i - leading + 1;
+      if (dayNum < 1 || dayNum > lastDate) return null;
+      return new Date(year, month, dayNum);
+    });
+  }, [monthAnchor]);
+
+  const dayReservas = useMemo(() => {
+    const list = reservasByDay.get(selectedDate.toDateString()) ?? [];
+    const sorted = [...list].sort((a, b) => a.horario.localeCompare(b.horario));
+    if (filterStatus === "todos") return sorted;
+    return sorted.filter((r) => toAppointmentStatus(r.status) === filterStatus);
+  }, [reservasByDay, selectedDate, filterStatus]);
+
+  async function updateStatus(id: string, status: ReservaStatus) {
+    setReservas((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status } : r)),
+    );
+    try {
+      await fetch(`/api/reservas/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+    } catch {}
+  }
+
+  function selectDay(d: Date) {
+    setSelectedDate(d);
+    setWeekAnchor(startOfWeek(d));
+  }
 
   const statusFilters: Array<{
     value: AppointmentStatus | "todos";
@@ -445,31 +575,186 @@ function Agenda() {
   ];
 
   return (
-    <div className="flex flex-col gap-5">
-      <h1 className="text-2xl font-bold">Agenda</h1>
-
-      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-        {weekDays.map((d, i) => (
+    <div className="flex flex-col gap-5 lg:max-w-4xl xl:max-w-7xl lg:mx-auto">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Agenda</h1>
+        <div className="flex gap-2 rounded-full border-2 border-[#F1f1f1] p-1 shrink-0">
           <button
-            key={i}
             type="button"
-            onClick={() => setSelectedDay(i)}
+            onClick={() => setViewMode("semana")}
             className={[
-              "flex flex-col items-center gap-1 rounded-xl border-2 px-3 py-2 shrink-0 min-w-[52px]",
-              selectedDay === i
-                ? "bg-black text-white border-black"
-                : "bg-[#FAFAFA] text-black border-[#F1f1f1]",
+              "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+              viewMode === "semana" ? "bg-black text-white" : "text-[#656565]",
             ].join(" ")}
           >
-            <span className="text-xs font-semibold opacity-70">{d.label}</span>
-            <span className="text-lg font-bold leading-none">{d.day}</span>
-            {d.isToday && (
-              <div
-                className={`w-1.5 h-1.5 rounded-full ${selectedDay === i ? "bg-white" : "bg-black"}`}
-              />
-            )}
+            Semana
           </button>
-        ))}
+          <button
+            type="button"
+            onClick={() => setViewMode("mes")}
+            className={[
+              "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+              viewMode === "mes" ? "bg-black text-white" : "text-[#656565]",
+            ].join(" ")}
+          >
+            Mês
+          </button>
+        </div>
+      </div>
+
+      {viewMode === "semana" ? (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              setWeekAnchor((w) => {
+                const d = new Date(w);
+                d.setDate(d.getDate() - 7);
+                return d;
+              })
+            }
+            className="w-8 h-8 rounded-full border-2 border-[#F1f1f1] bg-[#FAFAFA] flex items-center justify-center shrink-0"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 flex-1">
+            {weekDays.map((d, i) => {
+              const isSelected = sameDay(d, selectedDate);
+              const isToday = sameDay(d, today);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => selectDay(d)}
+                  className={[
+                    "flex flex-col items-center gap-1 rounded-xl border-2 px-3 py-2 shrink-0 min-w-[52px]",
+                    isSelected
+                      ? "bg-black text-white border-black"
+                      : "bg-[#FAFAFA] text-black border-[#F1f1f1]",
+                  ].join(" ")}
+                >
+                  <span className="text-xs font-semibold opacity-70">
+                    {weekDayLabels[i]}
+                  </span>
+                  <span className="text-lg font-bold leading-none">
+                    {d.getDate()}
+                  </span>
+                  {isToday && (
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-white" : "bg-black"}`}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              setWeekAnchor((w) => {
+                const d = new Date(w);
+                d.setDate(d.getDate() + 7);
+                return d;
+              })
+            }
+            className="w-8 h-8 rounded-full border-2 border-[#F1f1f1] bg-[#FAFAFA] flex items-center justify-center shrink-0"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      ) : (
+        <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-3">
+          <div className="flex items-center justify-between pb-2">
+            <button
+              type="button"
+              onClick={() =>
+                setMonthAnchor(
+                  (m) => new Date(m.getFullYear(), m.getMonth() - 1, 1),
+                )
+              }
+              className="w-8 h-8 rounded-full border-2 border-[#F1f1f1] bg-white flex items-center justify-center"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <p className="font-bold text-sm">
+              {monthLabels[monthAnchor.getMonth()]} {monthAnchor.getFullYear()}
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                setMonthAnchor(
+                  (m) => new Date(m.getFullYear(), m.getMonth() + 1, 1),
+                )
+              }
+              className="w-8 h-8 rounded-full border-2 border-[#F1f1f1] bg-white flex items-center justify-center"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-7 gap-1 pb-1">
+            {weekDayLabels.map((l) => (
+              <div
+                key={l}
+                className="text-center text-xs font-semibold text-[#656565] py-1"
+              >
+                {l}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {monthGrid.map((d, i) => {
+              if (!d) return <div key={i} />;
+              const hasReservas = reservasByDay.has(d.toDateString());
+              const isSelected = sameDay(d, selectedDate);
+              const isToday = sameDay(d, today);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => selectDay(d)}
+                  className={[
+                    "aspect-square rounded-lg flex flex-col items-center justify-center gap-0.5 text-sm font-semibold",
+                    isSelected
+                      ? "bg-black text-white"
+                      : isToday
+                        ? "bg-white border-2 border-black"
+                        : "bg-white text-black",
+                  ].join(" ")}
+                >
+                  {d.getDate()}
+                  <div
+                    className={`w-1 h-1 rounded-full ${
+                      hasReservas
+                        ? isSelected
+                          ? "bg-white"
+                          : "bg-black"
+                        : "bg-transparent"
+                    }`}
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-[#656565]">
+          {selectedDate.toLocaleDateString("pt-BR", {
+            weekday: "long",
+            day: "2-digit",
+            month: "long",
+          })}
+        </p>
+        {!sameDay(selectedDate, today) && (
+          <button
+            type="button"
+            onClick={() => selectDay(today)}
+            className="rounded-full border-2 px-4 py-2 text-xs font-semibold shrink-0 bg-[#FAFAFA] text-[#656565] border-[#F1f1f1]"
+          >
+            Voltar para hoje
+          </button>
+        )}
       </div>
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar">
@@ -490,60 +775,82 @@ function Agenda() {
         ))}
       </div>
 
-      <div className="flex flex-col gap-3">
-        {filtered.length === 0 && (
-          <p className="text-center text-[#656565] py-8">
-            Nenhum agendamento encontrado.
-          </p>
-        )}
-        {filtered.map((apt) => (
-          <div
-            key={apt.id}
-            className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1 text-sm font-semibold text-[#656565]">
-                <Clock className="w-4 h-4" />
-                {apt.time}
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-4 lg:gap-4">
+          {dayReservas.length === 0 && (
+            <p className="text-center text-[#656565] py-8 lg:col-span-4">
+              Nenhum agendamento encontrado.
+            </p>
+          )}
+          {dayReservas.map((apt) => {
+            const status = toAppointmentStatus(apt.status);
+            const serviceNames = apt.servicos
+              .map((s) => s.servico.nome)
+              .join(", ");
+            return (
+              <div
+                key={apt.id}
+                className="w-full h-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1 text-sm font-semibold text-[#656565]">
+                    <Clock className="w-4 h-4" />
+                    {apt.horario}
+                  </div>
+                  <StatusPill status={status} />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Avatar initials={getInitials(apt.cliente.nome)} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold truncate">{apt.cliente.nome}</p>
+                    <p className="text-sm text-[#656565] truncate">
+                      {serviceNames}
+                    </p>
+                  </div>
+                  <p className="font-bold shrink-0">{formatPrice(apt.total)}</p>
+                </div>
+                {(status === "confirmado" || status === "pendente") && (
+                  <div className="flex gap-2 pt-3 border-t border-[#F1f1f1] mt-auto">
+                    <button
+                      type="button"
+                      onClick={() => updateStatus(apt.id, "CANCELADO")}
+                      className="flex-1 rounded-full border-2 border-[#F1f1f1] bg-white py-2 text-sm font-semibold text-red-500"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateStatus(apt.id, "CONCLUIDO")}
+                      className="flex-1 rounded-full bg-black text-white py-2 text-sm font-semibold"
+                    >
+                      Concluir
+                    </button>
+                  </div>
+                )}
               </div>
-              <StatusPill status={apt.status} />
-            </div>
-            <div className="flex items-center gap-3">
-              <Avatar initials={apt.initials} />
-              <div className="flex-1 min-w-0">
-                <p className="font-bold">{apt.client}</p>
-                <p className="text-sm text-[#656565]">{apt.service}</p>
-              </div>
-              <p className="font-bold shrink-0">{apt.price}</p>
-            </div>
-            {(apt.status === "confirmado" || apt.status === "pendente") && (
-              <div className="flex gap-2 pt-1 border-t border-[#F1f1f1]">
-                <button
-                  type="button"
-                  className="flex-1 rounded-full border-2 border-[#F1f1f1] bg-white py-2 text-sm font-semibold text-red-500"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="flex-1 rounded-full bg-black text-white py-2 text-sm font-semibold"
-                >
-                  Concluir
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
 function Clientes() {
   const [search, setSearch] = useState("");
-  const [dbClients, setDbClients] = useState<Array<{
-    id: string; nome: string; telefone: string; email: string | null; createdAt: string;
-  }>>([]);
+  const [dbClients, setDbClients] = useState<
+    Array<{
+      id: string;
+      nome: string;
+      telefone: string;
+      email: string | null;
+      createdAt: string;
+    }>
+  >([]);
 
   useEffect(() => {
     fetch("/api/clientes")
@@ -556,7 +863,13 @@ function Clientes() {
     ...dbClients.map((c) => ({
       id: c.id,
       name: c.nome,
-      initials: c.nome.trim().split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0].toUpperCase()).join(""),
+      initials: c.nome
+        .trim()
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((w: string) => w[0].toUpperCase())
+        .join(""),
       phone: c.telefone,
       lastVisit: new Date(c.createdAt).toLocaleDateString("pt-BR"),
       totalVisits: 1,
@@ -576,7 +889,7 @@ function Clientes() {
   const newClients = allClients.filter((c) => c.isNew).length;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 lg:max-w-4xl xl:max-w-7xl lg:mx-auto">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Clientes</h1>
         <div className="flex gap-2">
@@ -600,9 +913,9 @@ function Clientes() {
         />
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-4 lg:gap-4">
         {filtered.length === 0 && (
-          <p className="text-center text-[#656565] py-8">
+          <p className="text-center text-[#656565] py-8 lg:col-span-2">
             Nenhum cliente encontrado.
           </p>
         )}
@@ -665,9 +978,9 @@ function BottomSheet({
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end lg:items-center lg:justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-t-2xl flex flex-col max-h-[90vh]">
+      <div className="relative bg-white rounded-t-2xl flex flex-col max-h-[90vh] lg:rounded-2xl lg:w-full lg:max-w-md lg:max-h-[85vh]">
         <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0">
           <h2 className="font-bold text-lg">{title}</h2>
           <button
@@ -682,7 +995,7 @@ function BottomSheet({
           <div className="flex flex-col gap-3">{children}</div>
         </div>
         {footer && (
-          <div className="px-5 pt-3 pb-24 shrink-0 border-t border-[#F1f1f1] bg-white">
+          <div className="px-5 pt-3 pb-24 shrink-0 border-t border-[#F1f1f1] bg-white lg:pb-5">
             {footer}
           </div>
         )}
@@ -716,6 +1029,59 @@ function getInitials(name: string) {
 
 function Config() {
   const { services, setServices, barbers, setBarbers } = useStore();
+
+  const [horario, setHorario] = useState({
+    horaInicio: "08:00",
+    horaFim: "19:00",
+    intervalo: 30,
+    pausaAtiva: false,
+    pausaInicio: "12:00",
+    pausaFim: "13:00",
+    diasFuncionamento: [1, 2, 3, 4, 5, 6] as number[],
+  });
+  const [savingHorario, setSavingHorario] = useState(false);
+  const [horarioSaved, setHorarioSaved] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/configuracao-horario")
+      .then((r) => r.json())
+      .then((data) =>
+        setHorario((prev) => ({
+          ...prev,
+          ...data,
+          pausaInicio: data.pausaInicio ?? prev.pausaInicio,
+          pausaFim: data.pausaFim ?? prev.pausaFim,
+        })),
+      )
+      .catch(() => {});
+  }, []);
+
+  async function saveHorario() {
+    setSavingHorario(true);
+    try {
+      await fetch("/api/configuracao-horario", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...horario,
+          pausaInicio: horario.pausaAtiva ? horario.pausaInicio : null,
+          pausaFim: horario.pausaAtiva ? horario.pausaFim : null,
+        }),
+      });
+      setHorarioSaved(true);
+      setTimeout(() => setHorarioSaved(false), 2000);
+    } catch {}
+    setSavingHorario(false);
+  }
+
+  function toggleDiaFuncionamento(dia: number) {
+    setHorario((p) => ({
+      ...p,
+      diasFuncionamento: p.diasFuncionamento.includes(dia)
+        ? p.diasFuncionamento.filter((d) => d !== dia)
+        : [...p.diasFuncionamento, dia].sort(),
+    }));
+  }
 
   const [serviceModal, setServiceModal] = useState<{
     open: boolean;
@@ -870,7 +1236,7 @@ function Config() {
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 lg:max-w-4xl xl:max-w-7xl lg:mx-auto">
       <h1 className="text-2xl font-bold">Configurações</h1>
 
       <div className="flex flex-col items-center gap-3 py-4">
@@ -915,6 +1281,168 @@ function Config() {
         </div>
       </div>
 
+      {/* Horário de funcionamento */}
+      <div>
+        <p className="text-xs font-semibold text-[#656565] uppercase pb-2">
+          Horário de funcionamento
+        </p>
+        <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-semibold text-[#656565] uppercase block pb-2">
+              Dias de funcionamento
+            </label>
+            <div className="flex gap-1.5">
+              {["D", "S", "T", "Q", "Q", "S", "S"].map((letra, dia) => {
+                const active = horario.diasFuncionamento.includes(dia);
+                return (
+                  <button
+                    key={dia}
+                    type="button"
+                    onClick={() => toggleDiaFuncionamento(dia)}
+                    className={[
+                      "w-9 h-9 rounded-full text-xs font-bold shrink-0 border-2 transition-colors",
+                      active
+                        ? "bg-black text-white border-black"
+                        : "bg-white text-[#656565] border-[#F1f1f1]",
+                    ].join(" ")}
+                  >
+                    {letra}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+                Abre às
+              </label>
+              <input
+                type="time"
+                value={horario.horaInicio}
+                onChange={(e) =>
+                  setHorario((p) => ({ ...p, horaInicio: e.target.value }))
+                }
+                className="w-full rounded-xl border-2 border-[#F1f1f1] bg-white px-4 py-3 text-sm focus:outline-none focus:border-black"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+                Fecha às
+              </label>
+              <input
+                type="time"
+                value={horario.horaFim}
+                onChange={(e) =>
+                  setHorario((p) => ({ ...p, horaFim: e.target.value }))
+                }
+                className="w-full rounded-xl border-2 border-[#F1f1f1] bg-white px-4 py-3 text-sm focus:outline-none focus:border-black"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+              Intervalo entre horários
+            </label>
+            <select
+              value={horario.intervalo}
+              onChange={(e) =>
+                setHorario((p) => ({ ...p, intervalo: Number(e.target.value) }))
+              }
+              className="w-full rounded-xl border-2 border-[#F1f1f1] bg-white px-4 py-3 text-sm focus:outline-none focus:border-black appearance-none"
+            >
+              {[15, 20, 30, 45, 60].map((min) => (
+                <option key={min} value={min}>
+                  {formatDuration(min)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center justify-between pt-1 border-t border-[#F1f1f1]">
+            <div>
+              <p className="font-semibold text-sm">Pausa no meio do dia</p>
+              <p className="text-xs text-[#656565]">
+                Ex: horário de almoço, sem agendamentos
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setHorario((p) => ({ ...p, pausaAtiva: !p.pausaAtiva }))
+              }
+            >
+              {horario.pausaAtiva ? (
+                <ToggleRight className="w-7 h-7 text-black" />
+              ) : (
+                <ToggleLeft className="w-7 h-7 text-[#656565]" />
+              )}
+            </button>
+          </div>
+
+          {horario.pausaAtiva && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+                  Pausa de
+                </label>
+                <input
+                  type="time"
+                  value={horario.pausaInicio}
+                  onChange={(e) =>
+                    setHorario((p) => ({ ...p, pausaInicio: e.target.value }))
+                  }
+                  className="w-full rounded-xl border-2 border-[#F1f1f1] bg-white px-4 py-3 text-sm focus:outline-none focus:border-black"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+                  Até
+                </label>
+                <input
+                  type="time"
+                  value={horario.pausaFim}
+                  onChange={(e) =>
+                    setHorario((p) => ({ ...p, pausaFim: e.target.value }))
+                  }
+                  className="w-full rounded-xl border-2 border-[#F1f1f1] bg-white px-4 py-3 text-sm focus:outline-none focus:border-black"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-row gap-5 pt-4">
+            <button
+              type="button"
+              onClick={saveHorario}
+              disabled={savingHorario}
+              className="w-full rounded-full bg-black text-white py-3 text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {horarioSaved ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Salvo
+                </>
+              ) : savingHorario ? (
+                "Salvando..."
+              ) : (
+                "Salvar horário"
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={saveHorario}
+              disabled={savingHorario}
+              className="w-full rounded-full bg-white text-black/90 border-[#cccccc]/90 border py-3 text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              Personalizar
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Serviços */}
       <div>
         <div className="flex items-center justify-between pb-2">
@@ -930,9 +1458,9 @@ function Config() {
             Novo
           </button>
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 lg:grid lg:grid-cols-2 lg:gap-3">
           {services.length === 0 && (
-            <p className="text-center text-[#656565] text-sm py-6">
+            <p className="text-center text-[#656565] text-sm py-6 lg:col-span-2">
               Nenhum serviço cadastrado.
             </p>
           )}
@@ -1005,9 +1533,9 @@ function Config() {
             Adicionar
           </button>
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 lg:grid lg:grid-cols-2 lg:gap-3">
           {barbers.length === 0 && (
-            <p className="text-center text-[#656565] text-sm py-6">
+            <p className="text-center text-[#656565] text-sm py-6 lg:col-span-2">
               Nenhum barbeiro cadastrado.
             </p>
           )}
@@ -1453,7 +1981,7 @@ function Gestor() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 lg:max-w-4xl xl:max-w-7xl lg:mx-auto">
       <div>
         <h1 className="text-2xl font-bold">Gestor</h1>
         <p className="text-sm text-[#656565]">Pixels de rastreio e métricas</p>
@@ -1464,7 +1992,7 @@ function Gestor() {
         <p className="text-xs font-semibold text-[#656565] uppercase pb-3">
           Métricas — últimos 30 dias
         </p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             {
               label: "Visualizações",
@@ -1508,57 +2036,61 @@ function Gestor() {
         </div>
       </div>
 
-      {/* Origem do tráfego */}
-      <div>
-        <p className="text-xs font-semibold text-[#656565] uppercase pb-3">
-          Origem do tráfego
-        </p>
-        <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3">
-          {trafficSources.map((s) => (
-            <div key={s.label} className="flex items-center gap-3">
-              <span className="text-sm font-semibold w-16 shrink-0">
-                {s.label}
-              </span>
-              <div className="flex-1 h-2 rounded-full bg-[#F1f1f1]">
-                <div
-                  className={`h-2 rounded-full ${s.color}`}
-                  style={{ width: `${s.percent}%` }}
-                />
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6">
+        {/* Origem do tráfego */}
+        <div>
+          <p className="text-xs font-semibold text-[#656565] uppercase pb-3">
+            Origem do tráfego
+          </p>
+          <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3">
+            {trafficSources.map((s) => (
+              <div key={s.label} className="flex items-center gap-3">
+                <span className="text-sm font-semibold w-16 shrink-0">
+                  {s.label}
+                </span>
+                <div className="flex-1 h-2 rounded-full bg-[#F1f1f1]">
+                  <div
+                    className={`h-2 rounded-full ${s.color}`}
+                    style={{ width: `${s.percent}%` }}
+                  />
+                </div>
+                <span className="text-sm font-bold w-9 text-right shrink-0">
+                  {s.percent}%
+                </span>
               </div>
-              <span className="text-sm font-bold w-9 text-right shrink-0">
-                {s.percent}%
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Eventos recentes */}
-      <div>
-        <p className="text-xs font-semibold text-[#656565] uppercase pb-3">
-          Eventos recentes
-        </p>
-        <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
-          {recentEvents.map((ev, i) => (
-            <div
-              key={i}
-              className={[
-                "flex items-center gap-3 px-4 py-3",
-                i < recentEvents.length - 1 ? "border-b border-[#F1f1f1]" : "",
-              ].join(" ")}
-            >
-              <div className="w-7 h-7 rounded-full bg-black flex items-center justify-center shrink-0">
-                <Zap className="w-3 h-3 text-white" />
+        {/* Eventos recentes */}
+        <div className="mt-6 lg:mt-0">
+          <p className="text-xs font-semibold text-[#656565] uppercase pb-3">
+            Eventos recentes
+          </p>
+          <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
+            {recentEvents.map((ev, i) => (
+              <div
+                key={i}
+                className={[
+                  "flex items-center gap-3 px-4 py-3",
+                  i < recentEvents.length - 1
+                    ? "border-b border-[#F1f1f1]"
+                    : "",
+                ].join(" ")}
+              >
+                <div className="w-7 h-7 rounded-full bg-black flex items-center justify-center shrink-0">
+                  <Zap className="w-3 h-3 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold font-mono text-[#656565]">
+                    {ev.name}
+                  </p>
+                  <p className="text-sm font-semibold truncate">{ev.desc}</p>
+                </div>
+                <p className="text-xs text-[#656565] shrink-0">{ev.time}</p>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold font-mono text-[#656565]">
-                  {ev.name}
-                </p>
-                <p className="text-sm font-semibold truncate">{ev.desc}</p>
-              </div>
-              <p className="text-xs text-[#656565] shrink-0">{ev.time}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -1567,7 +2099,7 @@ function Gestor() {
         <p className="text-xs font-semibold text-[#656565] uppercase pb-3">
           Pixels instalados
         </p>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
           {pixelList.map((pixel) => {
             const isExpanded = expanded === pixel.id;
             const isOn = enabled[pixel.id];
@@ -1694,8 +2226,36 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
 
   return (
-    <div className="bg-zinc-50 min-h-screen">
-      <div className="max-w-md mx-auto px-5 pt-10 pb-28">
+    <div className="bg-zinc-50 min-h-screen lg:flex">
+      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 border-r-2 border-[#F1f1f1] bg-white px-4 py-6">
+        <div className="flex items-center gap-2 px-2 pb-8">
+          <Avatar initials="YV" />
+          <div className="min-w-0">
+            <p className="font-bold text-sm truncate">YvisonBarber</p>
+            <p className="text-xs text-[#656565] truncate">Painel admin</p>
+          </div>
+        </div>
+        <nav className="flex flex-col gap-1">
+          {navItems.map(({ tab, label, icon }) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={[
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+                activeTab === tab
+                  ? "bg-black text-white"
+                  : "text-[#656565] hover:bg-[#FAFAFA]",
+              ].join(" ")}
+            >
+              {icon}
+              {label}
+            </button>
+          ))}
+        </nav>
+      </aside>
+
+      <div className="max-w-md mx-auto px-5 pt-10 pb-28 lg:max-w-none lg:mx-0 lg:ml-64 lg:px-10 lg:pt-10 lg:pb-10">
         {activeTab === "dashboard" && <Dashboard />}
         {activeTab === "agenda" && <Agenda />}
         {activeTab === "clientes" && <Clientes />}
@@ -1703,7 +2263,7 @@ const Admin = () => {
         {activeTab === "config" && <Config />}
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-[#F1f1f1] z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-[#F1f1f1] z-50 lg:hidden">
         <div className="max-w-md mx-auto flex">
           {navItems.map(({ tab, label, icon }) => (
             <button

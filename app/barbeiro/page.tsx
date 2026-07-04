@@ -3,9 +3,20 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useStore } from "@/app/context/store";
+import { generateTimeSlots, type HorarioConfig } from "@/lib/horarios";
+
+const defaultHorarioConfig: HorarioConfig = {
+  horaInicio: "08:00",
+  horaFim: "19:00",
+  intervalo: 30,
+  pausaAtiva: false,
+  pausaInicio: null,
+  pausaFim: null,
+  diasFuncionamento: [1, 2, 3, 4, 5, 6],
+};
 
 type ActiveTab = "servicos" | "horario" | "barbeiro" | "reserva";
 
@@ -211,9 +222,20 @@ const BarbeiroContent = () => {
     new Set(),
   );
   const [finalizando, setFinalizando] = useState(false);
+  const [horarioConfig, setHorarioConfig] = useState<HorarioConfig>(
+    defaultHorarioConfig,
+  );
+
+  useEffect(() => {
+    fetch("/api/configuracao-horario")
+      .then((r) => r.json())
+      .then((data) => setHorarioConfig((prev) => ({ ...prev, ...data })))
+      .catch(() => {});
+  }, []);
+
   const timeSlots = useMemo(
-    () => ["08:00", "08:30", "09:00", "09:30", "10:00"],
-    [],
+    () => generateTimeSlots(horarioConfig, selectedDate.getDay()),
+    [horarioConfig, selectedDate],
   );
 
   const total = useMemo(() => {
@@ -444,11 +466,17 @@ const BarbeiroContent = () => {
                     Horários
                   </h1>
                 </div>
-                <TimeSlotList
-                  slots={timeSlots}
-                  selectedSlot={selectedSlot}
-                  onSelect={setSelectedSlot}
-                />
+                {timeSlots.length === 0 ? (
+                  <p className="text-sm text-[#656565]">
+                    Fechado neste dia. Escolha outra data.
+                  </p>
+                ) : (
+                  <TimeSlotList
+                    slots={timeSlots}
+                    selectedSlot={selectedSlot}
+                    onSelect={setSelectedSlot}
+                  />
+                )}
                 <Calendar selected={selectedDate} onSelect={setSelectedDate} />
               </div>
             ) : activeTab === "barbeiro" ? (

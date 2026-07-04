@@ -79,9 +79,9 @@ const Header = () => {
                   <button
                     type="button"
                     onClick={() => photoInputRef.current?.click()}
-                    className="relative shrink-0"
+                    className="relative  shrink-0"
                   >
-                    <div className="w-14 h-14 rounded-full bg-black overflow-hidden flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full bg-black overflow-hidden flex items-center justify-center">
                       {user.photo ? (
                         <img
                           src={user.photo}
@@ -105,12 +105,16 @@ const Header = () => {
                   </button>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-base truncate">{user.name}</p>
-                    <p className="text-sm text-[#656565] truncate">{user.email}</p>
+                    <p className="text-sm text-[#656565] truncate">
+                      {user.email}
+                    </p>
                   </div>
                 </>
               ) : (
                 <>
-                  <h1 className="flex-1 text-lg font-semibold">Olá, faça seu login!</h1>
+                  <h1 className="flex-1 text-lg font-semibold">
+                    Olá, faça seu login!
+                  </h1>
                   <Button className="h-10 w-12">
                     <LogIn className="w-12 h-12" />
                   </Button>

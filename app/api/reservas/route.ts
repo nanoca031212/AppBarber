@@ -50,14 +50,12 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const clienteId = new URL(req.url).searchParams.get("clienteId");
-  if (!clienteId) {
-    return NextResponse.json([], { status: 200 });
-  }
 
   const reservas = await prisma.reserva.findMany({
-    where: { clienteId },
+    where: clienteId ? { clienteId } : undefined,
     orderBy: { data: "desc" },
     include: {
+      cliente: true,
       servicos: { include: { servico: true } },
       barbeiro: true,
     },

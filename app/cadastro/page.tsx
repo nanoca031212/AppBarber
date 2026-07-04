@@ -82,7 +82,7 @@ function CadastroForm() {
     fetch("/api/clientes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nome, email, telefone }),
+      body: JSON.stringify({ nome, email, telefone, senha }),
     })
       .then((r) => r.json())
       .then(async (cliente) => {

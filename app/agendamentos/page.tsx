@@ -98,11 +98,13 @@ export default function AgendamentosPage() {
     setConfirmingId(null);
   }
 
-  const confirmingAgendamento = agendamentos.find((ag) => ag.id === confirmingId);
+  const confirmingAgendamento = agendamentos.find(
+    (ag) => ag.id === confirmingId,
+  );
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-white flex flex-col pb-24">
+      <div className="h-screen bg-white flex flex-col pb-24">
         <ClientBottomNav />
 
         <div className="px-5 pt-8 pb-4 flex items-center gap-3 border-b border-[#F1f1f1]">
@@ -116,7 +118,7 @@ export default function AgendamentosPage() {
           <h1 className="text-xl font-bold">Meus agendamentos</h1>
         </div>
 
-        <div className="flex flex-col items-center justify-center gap-4 py-20 text-center px-5">
+        <div className="flex flex-col items-center h-screen justify-center gap-4 py-20 text-center px-5">
           <div className="w-16 h-16 rounded-full bg-[#F1f1f1] flex items-center justify-center">
             <CalendarDays className="w-8 h-8 text-[#656565]" />
           </div>
@@ -215,7 +217,10 @@ export default function AgendamentosPage() {
 
                 <div className="flex flex-col gap-1.5">
                   {ag.servicos.map(({ servico }) => (
-                    <div key={servico.nome} className="flex items-center gap-2 text-sm">
+                    <div
+                      key={servico.nome}
+                      className="flex items-center gap-2 text-sm"
+                    >
                       <Scissors className="w-3.5 h-3.5 text-[#656565] shrink-0" />
                       <span className="font-semibold">{servico.nome}</span>
                       <span className="text-[#656565] ml-auto">
@@ -281,8 +286,11 @@ export default function AgendamentosPage() {
                 <span className="font-semibold text-black">
                   {confirmingAgendamento.barbeiro.nome}
                 </span>{" "}
-                — {confirmingAgendamento.servicos.map((s) => s.servico.nome).join(", ")}.
-                Esta ação não pode ser desfeita.
+                —{" "}
+                {confirmingAgendamento.servicos
+                  .map((s) => s.servico.nome)
+                  .join(", ")}
+                . Esta ação não pode ser desfeita.
               </p>
             </div>
 
@@ -300,7 +308,9 @@ export default function AgendamentosPage() {
                 disabled={cancelingId === confirmingId}
                 className="flex-1 rounded-full bg-red-500 text-white py-3.5 text-sm font-semibold disabled:opacity-60"
               >
-                {cancelingId === confirmingId ? "Cancelando..." : "Sim, cancelar"}
+                {cancelingId === confirmingId
+                  ? "Cancelando..."
+                  : "Sim, cancelar"}
               </button>
             </div>
           </div>

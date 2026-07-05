@@ -69,7 +69,7 @@ export default function PerfilPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-white flex flex-col pb-24">
+      <div className="h-screen bg-white flex flex-col pb-24">
         <ClientBottomNav />
         <div className="px-5 pt-8 pb-4 flex items-center gap-3 border-b border-[#F1f1f1]">
           <button
@@ -81,7 +81,7 @@ export default function PerfilPage() {
           </button>
           <h1 className="text-xl font-bold">Perfil</h1>
         </div>
-        <div className="flex flex-col items-center justify-center gap-4 py-20 text-center px-5">
+        <div className="flex flex-col items-center justify-center h-screen gap-4 py-20 text-center px-5">
           <div className="w-16 h-16 rounded-full bg-[#F1f1f1] flex items-center justify-center">
             <User className="w-8 h-8 text-[#656565]" />
           </div>

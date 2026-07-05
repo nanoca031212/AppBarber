@@ -1,7 +1,16 @@
 "use client";
 
-import { CalendarDays, Camera, Home, LogIn, Menu, Search } from "lucide-react";
+import {
+  CalendarDays,
+  Camera,
+  Home,
+  LogIn,
+  Menu,
+  Search,
+  User,
+} from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -46,6 +55,7 @@ const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { services, user, setUser } = useStore();
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -72,8 +82,8 @@ const Header = () => {
           <SheetHeader>
             <SheetTitle>YvisonBarber</SheetTitle>
           </SheetHeader>
-          <div className="flex flex-col  gap-1 px-4 pt-2">
-            <div className="flex items-center gap-4 py-6">
+          <div className="flex flex-col   gap-1 px-4 pt-2">
+            <div className="flex  items-center gap-4 py-6">
               {user ? (
                 <>
                   <button
@@ -161,20 +171,37 @@ const Header = () => {
         </SheetContent>
       </Sheet>
 
-      <div className="py-6 space-y-6">
+      <div className="py-6  space-y-6 ">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-xl font-bold text-black">YvisonBarber</h1>
+          </div>
+          <div className="hidden lg:flex items-center gap-6">
+            <Button
+              onClick={() => router.push("/agendamentos")}
+              className="rounded-full gap-2  bg-[#FAFAFA] text-black font-semibold hover:bg-[#F1F1F1]"
+            >
+              <CalendarDays className="w-5 h-5" />
+              Agendamentos
+            </Button>
+            <Button
+              onClick={() => router.push("/perfil")}
+              className="rounded-xl px-3 py-4 gap-2 border-2 border-[#F1F1F1] bg-black text-white font-semibold hover:bg-[#F1F1F1]"
+            >
+              <User className="w-5 h-5" />
+              Perfil
+            </Button>
           </div>
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
             aria-label="Abrir menu"
+            className="lg:hidden"
           >
             <Menu className="text-2xl" color="black" />
           </button>
         </div>
-        <div>
+        <div className="lg:hidden">
           <Field orientation="horizontal" className="pb-4">
             <Input
               type="search"

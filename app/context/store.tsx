@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 export type Service = {
   id: number;
@@ -12,13 +12,30 @@ export type Service = {
 };
 
 export type Barber = {
-  id: number;
+  id: string;
   name: string;
   initials: string;
   description: string;
   serviceIds: number[];
   photo?: string;
 };
+
+type BarbeiroApi = {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  foto: string | null;
+};
+
+function getInitials(name: string) {
+  return name
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+}
 
 export type User = {
   id: string;
@@ -47,7 +64,7 @@ export const DEFAULT_SERVICES: Service[] = [
 ];
 
 export const DEFAULT_BARBERS: Barber[] = [
-  { id: 1, name: "Yvison", initials: "YV", description: "Especialista em cortes modernos e barba", serviceIds: [1, 2, 3, 4] },
+  { id: "default-yvison", name: "Yvison", initials: "YV", description: "Especialista em cortes modernos e barba", serviceIds: [1, 2, 3, 4] },
 ];
 
 function loadUser(): User | null {
@@ -64,6 +81,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [services, setServices] = useState<Service[]>(DEFAULT_SERVICES);
   const [barbers, setBarbers] = useState<Barber[]>(DEFAULT_BARBERS);
   const [user, setUserState] = useState<User | null>(loadUser);
+
+  useEffect(() => {
+    fetch("/api/barbeiros")
+      .then((r) => r.json())
+      .then((data: BarbeiroApi[]) => {
+        if (!Array.isArray(data) || data.length === 0) return;
+        setBarbers((prev) =>
+          data.map((b) => {
+            const existing = prev.find((p) => p.id === b.id);
+            return {
+              id: b.id,
+              name: b.nome,
+              initials: getInitials(b.nome),
+              description: b.descricao ?? "",
+              photo: b.foto ?? undefined,
+              serviceIds: existing?.serviceIds ?? services.map((s) => s.id),
+            };
+          }),
+        );
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const setUser = useCallback((u: User | null) => {
     setUserState(u);

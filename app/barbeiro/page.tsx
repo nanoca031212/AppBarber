@@ -182,7 +182,7 @@ type TimeSlotListProps = {
 
 function TimeSlotList({ slots, selectedSlot, onSelect }: TimeSlotListProps) {
   return (
-    <div className="flex overflow-x-auto no-scrollbar gap-4">
+    <div className="flex overflow-x-auto no-scrollbar gap-4 lg:flex-wrap lg:overflow-visible">
       {slots.map((slot) => (
         <Button
           key={slot}
@@ -202,12 +202,11 @@ function TimeSlotList({ slots, selectedSlot, onSelect }: TimeSlotListProps) {
   );
 }
 
-
 const BarbeiroContent = () => {
   const searchParams = useSearchParams();
   const { barbers, services, user } = useStore();
 
-  const barberId = Number(searchParams.get("id")) || barbers[0]?.id;
+  const barberId = searchParams.get("id") ?? barbers[0]?.id;
   const barber = barbers.find((b) => b.id === barberId) ?? barbers[0];
   const barberServices = barber
     ? services.filter((s) => barber.serviceIds.includes(s.id))
@@ -222,9 +221,8 @@ const BarbeiroContent = () => {
     new Set(),
   );
   const [finalizando, setFinalizando] = useState(false);
-  const [horarioConfig, setHorarioConfig] = useState<HorarioConfig>(
-    defaultHorarioConfig,
-  );
+  const [horarioConfig, setHorarioConfig] =
+    useState<HorarioConfig>(defaultHorarioConfig);
 
   useEffect(() => {
     fetch("/api/configuracao-horario")
@@ -304,7 +302,7 @@ const BarbeiroContent = () => {
 
   return (
     <div className="relative">
-      <div className="bg-[#505050] w-full z-0 h-[340px]"></div>
+      <div className="bg-[#505050] w-full z-0 h-[340px] lg:h-[430px]"></div>
       <Link href="/">
         <Button className="absolute top-4 left-4 rounded-full bg-white h-12 w-12 z-20 text-black">
           <ArrowLeftIcon />
@@ -312,285 +310,306 @@ const BarbeiroContent = () => {
       </Link>
       <div
         className={[
-          "bg-white z-20 py-6 -mt-12 rounded-4xl",
+          "bg-white z-20 py-6 -mt-12 rounded-4xl lg:rounded-none",
           showBottomBar ? "pb-28" : "",
         ].join(" ")}
       >
-        <div className="pb-6 border-b border-[#E5E5E5]">
-          <div className="px-5">
-            <div className="flex items-center gap-3">
-              {barber?.photo ? (
-                <img
-                  src={barber.photo}
-                  alt={barber?.name}
-                  className="w-11 h-11 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-11 h-11 rounded-full bg-black flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">
-                    {barber?.initials}
-                  </span>
-                </div>
-              )}
-              <h1 className="text-xl font-bold">
-                {barber?.name ?? "Barbeiro"}
-              </h1>
-            </div>
-            <div className="pt-3">
-              <div className="pt-2 text-[#656565] flex items-center gap-2">
-                <img src="/Local.svg" alt="" className="w-5 h-5 text-black" />
-                <h1>Avenida São Sebastião, 357, São Paulo</h1>
+        <div className="lg:max-w-7xl lg:mx-auto">
+          <div className="pb-6 border-b border-[#f1f1f1]">
+            <div className="px-5">
+              <div className="flex items-center gap-3">
+                {barber?.photo ? (
+                  <img
+                    src={barber.photo}
+                    alt={barber?.name}
+                    className="w-11 h-11 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-11 h-11 rounded-full bg-black flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">
+                      {barber?.initials}
+                    </span>
+                  </div>
+                )}
+                <h1 className="text-xl font-bold">
+                  {barber?.name ?? "Barbeiro"}
+                </h1>
               </div>
-              <div className="pt-2 text-[#656565] flex items-center gap-2">
-                <img src="/estrela.svg" alt="" className="w-5 h-5 text-black" />
-                <h1>5,0 (889 avaliações)</h1>
+              <div className="pt-3 lg:flex lg:flex-row lg:justify-between">
+                <div className="pt-2 text-[#656565] flex items-center gap-2">
+                  <img src="/Local.svg" alt="" className="w-5 h-5 text-black" />
+                  <h1>Avenida São Sebastião, 357, São Paulo</h1>
+                </div>
+                <div className="pt-2 text-[#656565] flex items-center gap-2">
+                  <img
+                    src="/estrela.svg"
+                    alt=""
+                    className="w-5 h-5 text-black"
+                  />
+                  <h1>
+                    <span className="text-black ">5,0</span> (889 avaliações)
+                  </h1>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="py-6">
-          {activeTab !== "reserva" && (
-            <div className="pb-6 border-b border-[#E5E5E5]">
-              <div className="px-5 flex overflow-x-auto no-scrollbar gap-3">
-                <Button
-                  type="button"
-                  className={tabClassName("servicos")}
-                  onClick={() => {
-                    setActiveTab("servicos");
-                    setSelectedSlot(null);
-                  }}
-                >
-                  Serviços
-                </Button>
-                <Button
-                  type="button"
-                  className={tabClassName("horario")}
-                  disabled={selectedServices.size === 0}
-                  onClick={() => {
-                    if (selectedServices.size > 0) {
-                      setActiveTab("horario");
+          <div className="py-6">
+            {activeTab !== "reserva" && (
+              <div className="pb-6 border-b border-[#f1f1f1]">
+                <div className="px-5 flex overflow-x-auto no-scrollbar gap-3">
+                  <Button
+                    type="button"
+                    className={tabClassName("servicos")}
+                    onClick={() => {
+                      setActiveTab("servicos");
                       setSelectedSlot(null);
-                    }
-                  }}
-                >
-                  Horario
-                </Button>
-                <Button
-                  type="button"
-                  className={tabClassName("barbeiro")}
-                  disabled={
-                    selectedServices.size === 0 || selectedSlot === null
-                  }
-                  onClick={() => {
-                    if (selectedServices.size > 0 && selectedSlot !== null) {
-                      setActiveTab("barbeiro");
-                    }
-                  }}
-                >
-                  Barbeiro
-                </Button>
-              </div>
-            </div>
-          )}
-
-          <div className="px-5 pt-6">
-            {activeTab === "servicos" ? (
-              <div className="space-y-4 pt-3">
-                {barberServices.map((service) => {
-                  const isSelected = selectedServices.has(service.id);
-                  return (
-                    <div
-                      key={service.id}
-                      className={[
-                        "h-36 w-full flex gap-6 items-center border-2 px-3 rounded-md",
-                        isSelected
-                          ? "bg-black/5 border-black/15"
-                          : "bg-[#FAFAFA] border-[#F1f1f1]",
-                      ].join(" ")}
-                    >
-                      <div className="size-28 shrink-0 bg-black/15 rounded-md overflow-hidden flex items-center justify-center">
-                        {service.photo ? (
-                          <img
-                            src={service.photo}
-                            alt={service.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-3xl">✂</span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div>
-                          <h1 className="font-bold">{service.name}</h1>
-                        </div>
-                        <div className="pb-2 text-[#656565] text-sm leading-snug">
-                          <h1>{service.description}</h1>
-                        </div>
-                        <div className="flex pt-1 items-center gap-3">
-                          <div className="flex-1 min-w-0">
-                            <h1 className="font-bold">
-                              R$ {service.price.toFixed(2).replace(".", ",")}
-                            </h1>
-                          </div>
-                          <Button
-                            type="button"
-                            onClick={() =>
-                              setSelectedServices((prev) => {
-                                const next = new Set(prev);
-                                if (next.has(service.id))
-                                  next.delete(service.id);
-                                else next.add(service.id);
-                                return next;
-                              })
-                            }
-                            className={[
-                              "rounded-full font-bold py-5 px-4 shrink-0",
-                              isSelected
-                                ? "bg-black text-white border border-black"
-                                : "text-black bg-white border border-black/15",
-                            ].join(" ")}
-                          >
-                            {isSelected ? "Selecionado" : "Selecionar"}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : activeTab === "horario" ? (
-              <div className="flex flex-col gap-4">
-                <div>
-                  <h1 className="text-md pt-3 font-semibold uppercase">
-                    Horários
-                  </h1>
-                </div>
-                {timeSlots.length === 0 ? (
-                  <p className="text-sm text-[#656565]">
-                    Fechado neste dia. Escolha outra data.
-                  </p>
-                ) : (
-                  <TimeSlotList
-                    slots={timeSlots}
-                    selectedSlot={selectedSlot}
-                    onSelect={setSelectedSlot}
-                  />
-                )}
-                <Calendar selected={selectedDate} onSelect={setSelectedDate} />
-              </div>
-            ) : activeTab === "barbeiro" ? (
-              <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 text-[#656565]">
-                <h1 className="font-semibold text-black pb-1">
-                  Sobre {barber?.name ?? "o barbeiro"}
-                </h1>
-                <p>{barber?.description || "Barbeiro profissional."}</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4">
-                <h1 className="text-lg font-bold">Confirmar Reserva</h1>
-
-                <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-1">
-                  <p className="text-xs font-semibold text-[#656565] uppercase">
-                    Barbearia
-                  </p>
-                  <p className="font-bold">{barber?.name ?? "Barbeiro"}</p>
-                  <p className="text-sm text-[#656565]">
-                    Avenida São Sebastião, 357, São Paulo
-                  </p>
-                </div>
-
-                <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3">
-                  <p className="text-xs font-semibold text-[#656565] uppercase">
+                    }}
+                  >
                     Serviços
-                  </p>
-                  {selectedServices.size === 0 ? (
-                    <p className="text-sm text-[#656565]">
-                      Nenhum serviço selecionado.
-                    </p>
-                  ) : (
-                    barberServices
-                      .filter((s) => selectedServices.has(s.id))
-                      .map((s) => (
-                        <div
-                          key={s.id}
-                          className="flex items-center justify-between"
-                        >
-                          <p className="font-semibold">{s.name}</p>
-                          <p className="font-semibold">
-                            R$ {s.price.toFixed(2).replace(".", ",")}
-                          </p>
-                        </div>
-                      ))
-                  )}
+                  </Button>
+                  <Button
+                    type="button"
+                    className={tabClassName("horario")}
+                    disabled={selectedServices.size === 0}
+                    onClick={() => {
+                      if (selectedServices.size > 0) {
+                        setActiveTab("horario");
+                        setSelectedSlot(null);
+                      }
+                    }}
+                  >
+                    Horario
+                  </Button>
+                  <Button
+                    type="button"
+                    className={tabClassName("barbeiro")}
+                    disabled={
+                      selectedServices.size === 0 || selectedSlot === null
+                    }
+                    onClick={() => {
+                      if (selectedServices.size > 0 && selectedSlot !== null) {
+                        setActiveTab("barbeiro");
+                      }
+                    }}
+                  >
+                    Barbeiro
+                  </Button>
                 </div>
-
-                <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-1">
-                  <p className="text-xs font-semibold text-[#656565] uppercase">
-                    Data e Horário
-                  </p>
-                  <p className="font-semibold">
-                    {selectedDate.toLocaleDateString("pt-BR", {
-                      weekday: "long",
-                      day: "2-digit",
-                      month: "long",
-                      year: "numeric",
-                    })}
-                    {selectedSlot ? ` • ${selectedSlot}` : ""}
-                  </p>
-                </div>
-
-                <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex items-center justify-between">
-                  <p className="font-bold text-base">Total</p>
-                  <p className="font-bold text-base">
-                    R${" "}
-                    {total.toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                    })}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("servicos")}
-                  className="text-sm text-[#656565] font-bold underline text-center"
-                >
-                  Editar reserva
-                </button>
               </div>
             )}
+
+            <div className="px-5 pt-6">
+              {activeTab === "servicos" ? (
+                <div className="space-y-4 pt-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-4">
+                  {barberServices.map((service) => {
+                    const isSelected = selectedServices.has(service.id);
+                    return (
+                      <div
+                        key={service.id}
+                        className={[
+                          "h-36 w-full flex gap-6 items-center border-2 px-3 rounded-md",
+                          isSelected
+                            ? "bg-black/5 border-black/15"
+                            : "bg-[#FAFAFA] border-[#F1f1f1]",
+                        ].join(" ")}
+                      >
+                        <div className="size-28 shrink-0 bg-black/15 rounded-md overflow-hidden flex items-center justify-center">
+                          {service.photo ? (
+                            <img
+                              src={service.photo}
+                              alt={service.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-3xl">✂</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div>
+                            <h1 className="font-bold">{service.name}</h1>
+                          </div>
+                          <div className="pb-2 text-[#656565] text-sm leading-snug">
+                            <h1>{service.description}</h1>
+                          </div>
+                          <div className="flex pt-1 items-center gap-3">
+                            <div className="flex-1 min-w-0">
+                              <h1 className="font-bold">
+                                R$ {service.price.toFixed(2).replace(".", ",")}
+                              </h1>
+                            </div>
+                            <Button
+                              type="button"
+                              onClick={() =>
+                                setSelectedServices((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(service.id))
+                                    next.delete(service.id);
+                                  else next.add(service.id);
+                                  return next;
+                                })
+                              }
+                              className={[
+                                "rounded-full font-bold py-5 px-4 shrink-0",
+                                isSelected
+                                  ? "bg-black text-white border border-black"
+                                  : "text-black bg-white border border-black/15",
+                              ].join(" ")}
+                            >
+                              {isSelected ? "Selecionado" : "Selecionar"}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : activeTab === "horario" ? (
+                <div className="flex flex-col gap-4 lg:flex-row lg:gap-8">
+                  <div className="lg:flex-1 lg:min-w-0">
+                    <div>
+                      <h1 className="text-md pt-3 font-semibold uppercase lg:pt-0">
+                        Horários
+                      </h1>
+                    </div>
+                    {timeSlots.length === 0 ? (
+                      <p className="text-sm text-[#656565] mt-4">
+                        Fechado neste dia. Escolha outra data.
+                      </p>
+                    ) : (
+                      <div className="mt-4">
+                        <TimeSlotList
+                          slots={timeSlots}
+                          selectedSlot={selectedSlot}
+                          onSelect={setSelectedSlot}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="lg:w-80 lg:shrink-0">
+                    <Calendar
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                    />
+                  </div>
+                </div>
+              ) : activeTab === "barbeiro" ? (
+                <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 text-[#656565]">
+                  <h1 className="font-semibold text-black pb-1">
+                    Sobre {barber?.name ?? "o barbeiro"}
+                  </h1>
+                  <p>{barber?.description || "Barbeiro profissional."}</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <h1 className="text-lg font-bold">Confirmar Reserva</h1>
+
+                  <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2">
+                    <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-1">
+                      <p className="text-xs font-semibold text-[#656565] uppercase">
+                        Barbearia
+                      </p>
+                      <p className="font-bold">{barber?.name ?? "Barbeiro"}</p>
+                      <p className="text-sm text-[#656565]">
+                        Avenida São Sebastião, 357, São Paulo
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3">
+                      <p className="text-xs font-semibold text-[#656565] uppercase">
+                        Serviços
+                      </p>
+                      {selectedServices.size === 0 ? (
+                        <p className="text-sm text-[#656565]">
+                          Nenhum serviço selecionado.
+                        </p>
+                      ) : (
+                        barberServices
+                          .filter((s) => selectedServices.has(s.id))
+                          .map((s) => (
+                            <div
+                              key={s.id}
+                              className="flex items-center justify-between"
+                            >
+                              <p className="font-semibold">{s.name}</p>
+                              <p className="font-semibold">
+                                R$ {s.price.toFixed(2).replace(".", ",")}
+                              </p>
+                            </div>
+                          ))
+                      )}
+                    </div>
+
+                    <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-1">
+                      <p className="text-xs font-semibold text-[#656565] uppercase">
+                        Data e Horário
+                      </p>
+                      <p className="font-semibold">
+                        {selectedDate.toLocaleDateString("pt-BR", {
+                          weekday: "long",
+                          day: "2-digit",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                        {selectedSlot ? ` • ${selectedSlot}` : ""}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex items-center justify-between">
+                      <p className="font-bold text-base">Total</p>
+                      <p className="font-bold text-base">
+                        R${" "}
+                        {total.toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("servicos")}
+                    className="text-sm text-[#656565] font-bold underline text-center"
+                  >
+                    Editar reserva
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {showBottomBar && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#E5E5E5] px-5 py-4">
-          <Button
-            className="w-full rounded-full bg-black text-white font-semibold py-6 text-base disabled:opacity-50"
-            disabled={
-              (activeTab === "horario" && selectedSlot === null) || finalizando
-            }
-            onClick={() => {
-              if (activeTab === "servicos") {
-                setActiveTab("horario");
-              } else if (activeTab === "horario" && selectedSlot !== null) {
-                setActiveTab("barbeiro");
-              } else if (activeTab === "barbeiro") {
-                setActiveTab("reserva");
-              } else if (activeTab === "reserva") {
-                handleFinalizar();
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#f1f1f1] px-5 py-4">
+          <div className="lg:max-w-3xl lg:mx-auto">
+            <Button
+              className="w-full rounded-full bg-black text-white font-semibold py-6 text-base disabled:opacity-50"
+              disabled={
+                (activeTab === "horario" && selectedSlot === null) ||
+                finalizando
               }
-            }}
-          >
-            {activeTab === "reserva"
-              ? finalizando
-                ? "Redirecionando..."
-                : "Finalizar Reserva"
-              : "Confirmar"}
-          </Button>
+              onClick={() => {
+                if (activeTab === "servicos") {
+                  setActiveTab("horario");
+                } else if (activeTab === "horario" && selectedSlot !== null) {
+                  setActiveTab("barbeiro");
+                } else if (activeTab === "barbeiro") {
+                  setActiveTab("reserva");
+                } else if (activeTab === "reserva") {
+                  handleFinalizar();
+                }
+              }}
+            >
+              {activeTab === "reserva"
+                ? finalizando
+                  ? "Redirecionando..."
+                  : "Finalizar Reserva"
+                : "Confirmar"}
+            </Button>
+          </div>
         </div>
       )}
-
     </div>
   );
 };

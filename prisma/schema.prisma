@@ -80,3 +80,14 @@ model HorarioFuncionamento {
   diasFuncionamento Int[]    @default([1, 2, 3, 4, 5, 6])
   updatedAt   DateTime @updatedAt
 }
+
+model PerfilNegocio {
+  id                 String   @id @default(cuid())
+  nomeBarbearia      String   @default("YvisonBarber")
+  endereco           String?
+  telefone           String?
+  barbeiroNome       String   @default("Yvison")
+  barbeiroDescricao  String?
+  barbeiroFoto       String?
+  updatedAt          DateTime @updatedAt
+}

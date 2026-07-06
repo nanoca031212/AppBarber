@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       },
     },
     include: {
+      cliente: { omit: { senha: true } },
       servicos: { include: { servico: true } },
       barbeiro: true,
     },
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest) {
     where: clienteId ? { clienteId } : undefined,
     orderBy: { data: "desc" },
     include: {
-      cliente: true,
+      cliente: { omit: { senha: true } },
       servicos: { include: { servico: true } },
       barbeiro: true,
     },

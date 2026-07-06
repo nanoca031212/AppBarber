@@ -491,6 +491,7 @@ function Perfil({ barberId }: { barberId: string }) {
     photo: barber?.photo ?? "",
   });
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   if (!barber) {
     return (
@@ -504,23 +505,36 @@ function Perfil({ barberId }: { barberId: string }) {
     barber.serviceIds.includes(s.id),
   );
 
-  function handleSave() {
+  async function handleSave() {
     if (!form.name.trim()) return;
-    setBarbers((prev) =>
-      prev.map((b) =>
-        b.id === barber!.id
-          ? {
-              ...b,
-              name: form.name.trim(),
-              initials: getInitials(form.name),
-              description: form.description.trim(),
-              photo: form.photo || undefined,
-            }
-          : b,
-      ),
-    );
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setSaving(true);
+    try {
+      await fetch(`/api/barbeiros/${barber!.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: form.name.trim(),
+          descricao: form.description.trim(),
+          foto: form.photo,
+        }),
+      });
+      setBarbers((prev) =>
+        prev.map((b) =>
+          b.id === barber!.id
+            ? {
+                ...b,
+                name: form.name.trim(),
+                initials: getInitials(form.name),
+                description: form.description.trim(),
+                photo: form.photo || undefined,
+              }
+            : b,
+        ),
+      );
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch {}
+    setSaving(false);
   }
 
   return (
@@ -645,7 +659,7 @@ function Perfil({ barberId }: { barberId: string }) {
       <button
         type="button"
         onClick={handleSave}
-        disabled={!form.name.trim()}
+        disabled={!form.name.trim() || saving}
         className={[
           "w-full rounded-full py-4 text-sm font-semibold transition-colors",
           saved
@@ -658,6 +672,8 @@ function Perfil({ barberId }: { barberId: string }) {
             <Check className="w-4 h-4" />
             Salvo!
           </span>
+        ) : saving ? (
+          "Salvando..."
         ) : (
           "Salvar alterações"
         )}

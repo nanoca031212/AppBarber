@@ -11,7 +11,6 @@ import {
   Search,
   ChevronRight,
   ChevronLeft,
-  Star,
   TrendingUp,
   Clock,
   CheckCircle2,
@@ -43,194 +42,13 @@ import type { Service, Barber } from "@/app/context/store";
 
 type AppointmentStatus = "confirmado" | "pendente" | "concluido" | "cancelado";
 
-type Appointment = {
-  id: number;
-  client: string;
-  initials: string;
-  service: string;
-  time: string;
-  status: AppointmentStatus;
-  price: string;
+type ClienteApi = {
+  id: string;
+  nome: string;
+  telefone: string;
+  email: string | null;
+  createdAt: string;
 };
-
-type Client = {
-  id: number;
-  name: string;
-  initials: string;
-  phone: string;
-  lastVisit: string;
-  totalVisits: number;
-  totalSpent: string;
-  isNew: boolean;
-};
-
-const appointments: Appointment[] = [
-  {
-    id: 1,
-    client: "Lucas Souza",
-    initials: "LS",
-    service: "Corte + Barba",
-    time: "08:00",
-    status: "concluido",
-    price: "R$ 80,00",
-  },
-  {
-    id: 2,
-    client: "Rafael Mendes",
-    initials: "RM",
-    service: "Corte de Cabelo",
-    time: "09:00",
-    status: "concluido",
-    price: "R$ 50,00",
-  },
-  {
-    id: 3,
-    client: "João Pedro",
-    initials: "JP",
-    service: "Barba",
-    time: "10:00",
-    status: "confirmado",
-    price: "R$ 35,00",
-  },
-  {
-    id: 4,
-    client: "Carlos Lima",
-    initials: "CL",
-    service: "Corte de Cabelo",
-    time: "11:00",
-    status: "confirmado",
-    price: "R$ 50,00",
-  },
-  {
-    id: 5,
-    client: "Felipe Costa",
-    initials: "FC",
-    service: "Pezinho",
-    time: "13:00",
-    status: "pendente",
-    price: "R$ 25,00",
-  },
-  {
-    id: 6,
-    client: "André Rocha",
-    initials: "AR",
-    service: "Corte + Barba",
-    time: "14:00",
-    status: "pendente",
-    price: "R$ 80,00",
-  },
-  {
-    id: 7,
-    client: "Mateus Alves",
-    initials: "MA",
-    service: "Corte de Cabelo",
-    time: "15:00",
-    status: "cancelado",
-    price: "R$ 50,00",
-  },
-  {
-    id: 8,
-    client: "Bruno Neves",
-    initials: "BN",
-    service: "Barba",
-    time: "16:00",
-    status: "confirmado",
-    price: "R$ 35,00",
-  },
-];
-
-const clients: Client[] = [
-  {
-    id: 1,
-    name: "Lucas Souza",
-    initials: "LS",
-    phone: "(11) 99999-1111",
-    lastVisit: "24/06/2026",
-    totalVisits: 18,
-    totalSpent: "R$ 1.440,00",
-    isNew: false,
-  },
-  {
-    id: 2,
-    name: "Rafael Mendes",
-    initials: "RM",
-    phone: "(11) 99999-2222",
-    lastVisit: "24/06/2026",
-    totalVisits: 12,
-    totalSpent: "R$ 600,00",
-    isNew: false,
-  },
-  {
-    id: 3,
-    name: "João Pedro",
-    initials: "JP",
-    phone: "(11) 99999-3333",
-    lastVisit: "20/06/2026",
-    totalVisits: 7,
-    totalSpent: "R$ 420,00",
-    isNew: false,
-  },
-  {
-    id: 4,
-    name: "Carlos Lima",
-    initials: "CL",
-    phone: "(11) 99999-4444",
-    lastVisit: "18/06/2026",
-    totalVisits: 24,
-    totalSpent: "R$ 1.920,00",
-    isNew: false,
-  },
-  {
-    id: 5,
-    name: "Felipe Costa",
-    initials: "FC",
-    phone: "(11) 99999-5555",
-    lastVisit: "15/06/2026",
-    totalVisits: 3,
-    totalSpent: "R$ 150,00",
-    isNew: true,
-  },
-  {
-    id: 6,
-    name: "André Rocha",
-    initials: "AR",
-    phone: "(11) 99999-6666",
-    lastVisit: "10/06/2026",
-    totalVisits: 9,
-    totalSpent: "R$ 720,00",
-    isNew: false,
-  },
-  {
-    id: 7,
-    name: "Mateus Alves",
-    initials: "MA",
-    phone: "(11) 99999-7777",
-    lastVisit: "05/06/2026",
-    totalVisits: 2,
-    totalSpent: "R$ 100,00",
-    isNew: true,
-  },
-  {
-    id: 8,
-    name: "Bruno Neves",
-    initials: "BN",
-    phone: "(11) 99999-8888",
-    lastVisit: "01/06/2026",
-    totalVisits: 31,
-    totalSpent: "R$ 2.480,00",
-    isNew: false,
-  },
-];
-
-const weekDays = [
-  { label: "Ter", day: "24", isToday: true },
-  { label: "Qua", day: "25", isToday: false },
-  { label: "Qui", day: "26", isToday: false },
-  { label: "Sex", day: "27", isToday: false },
-  { label: "Sáb", day: "28", isToday: false },
-  { label: "Dom", day: "29", isToday: false },
-  { label: "Seg", day: "30", isToday: false },
-];
 
 const statusConfig: Record<
   AppointmentStatus,
@@ -301,129 +119,245 @@ function Avatar({
 }
 
 function Dashboard() {
-  const todayConfirmed = appointments.filter(
-    (a) => a.status === "confirmado",
+  const { services } = useStore();
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const [reservas, setReservas] = useState<ReservaApi[]>([]);
+  const [dbClients, setDbClients] = useState<ClienteApi[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/reservas").then((r) => r.json()),
+      fetch("/api/clientes").then((r) => r.json()),
+    ])
+      .then(([reservasData, clientesData]) => {
+        if (Array.isArray(reservasData)) setReservas(reservasData);
+        if (Array.isArray(clientesData)) setDbClients(clientesData);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const todayReservas = useMemo(
+    () => reservas.filter((r) => sameDay(new Date(r.data), today)),
+    [reservas, today],
+  );
+  const todayConfirmed = todayReservas.filter(
+    (r) => r.status === "CONFIRMADO",
   ).length;
-  const todayTotal = appointments.length;
+
+  const monthRevenue = useMemo(() => {
+    return reservas
+      .filter(
+        (r) => r.status === "CONCLUIDO" && sameMonth(new Date(r.data), today),
+      )
+      .reduce((sum, r) => sum + r.total, 0);
+  }, [reservas, today]);
+
+  const prevMonthRevenue = useMemo(() => {
+    const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    return reservas
+      .filter(
+        (r) =>
+          r.status === "CONCLUIDO" && sameMonth(new Date(r.data), prevMonth),
+      )
+      .reduce((sum, r) => sum + r.total, 0);
+  }, [reservas, today]);
+
+  const revenueChangePercent =
+    prevMonthRevenue > 0
+      ? Math.round(((monthRevenue - prevMonthRevenue) / prevMonthRevenue) * 100)
+      : null;
+
+  const newClientsThisMonth = dbClients.filter((c) =>
+    sameMonth(new Date(c.createdAt), today),
+  ).length;
+
+  const pendentesHoje = todayReservas.filter(
+    (r) => r.status === "PENDENTE",
+  ).length;
+
+  const popularServices = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of reservas) {
+      if (r.status === "CANCELADO") continue;
+      for (const s of r.servicos) {
+        counts.set(s.servico.nome, (counts.get(s.servico.nome) ?? 0) + 1);
+      }
+    }
+    const withCounts = services.map((s) => ({
+      name: s.name,
+      count: counts.get(s.name) ?? 0,
+    }));
+    const sorted = withCounts.sort((a, b) => b.count - a.count);
+    const max = Math.max(1, sorted[0]?.count ?? 0);
+    return sorted
+      .slice(0, 4)
+      .map((s) => ({ ...s, percent: (s.count / max) * 100 }));
+  }, [reservas, services]);
+
+  const proximosAgendamentos = useMemo(
+    () =>
+      todayReservas
+        .filter((r) => r.status === "CONFIRMADO" || r.status === "PENDENTE")
+        .sort((a, b) => a.horario.localeCompare(b.horario))
+        .slice(0, 4),
+    [todayReservas],
+  );
 
   return (
     <div className="flex flex-col gap-5 lg:max-w-4xl xl:max-w-7xl lg:mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[#656565] text-sm">Terça-feira, 24 de junho</p>
+          <p className="text-[#656565] text-sm capitalize">
+            {today.toLocaleDateString("pt-BR", {
+              weekday: "long",
+              day: "2-digit",
+              month: "long",
+            })}
+          </p>
           <h1 className="text-2xl font-bold">Olá, Yvison</h1>
         </div>
         <Avatar initials="YV" size="lg" />
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656565] uppercase">
-              Hoje
-            </span>
-            <CalendarDays className="w-4 h-4 text-[#656565]" />
-          </div>
-          <p className="text-2xl font-bold">{todayTotal}</p>
-          <p className="text-xs text-[#656565]">{todayConfirmed} confirmados</p>
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
         </div>
-        <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656565] uppercase">
-              Mês
-            </span>
-            <TrendingUp className="w-4 h-4 text-[#656565]" />
-          </div>
-          <p className="text-2xl font-bold">R$ 3.200</p>
-          <p className="text-xs text-emerald-600 font-semibold">
-            +12% vs mês anterior
-          </p>
-        </div>
-        <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656565] uppercase">
-              Clientes
-            </span>
-            <Users className="w-4 h-4 text-[#656565]" />
-          </div>
-          <p className="text-2xl font-bold">142</p>
-          <p className="text-xs text-[#656565]">8 novos este mês</p>
-        </div>
-        <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#656565] uppercase">
-              Avaliação
-            </span>
-            <Star className="w-4 h-4 text-[#656565]" />
-          </div>
-          <p className="text-2xl font-bold">5,0</p>
-          <p className="text-xs text-[#656565]">889 avaliações</p>
-        </div>
-      </div>
-
-      <div className="lg:grid lg:grid-cols-2 lg:gap-6">
-        <div>
-          <div className="flex items-center justify-between pb-3">
-            <h2 className="font-bold">Próximos agendamentos</h2>
-          </div>
-          <div className="flex flex-col gap-3">
-            {appointments
-              .filter(
-                (a) => a.status === "confirmado" || a.status === "pendente",
-              )
-              .slice(0, 4)
-              .map((apt) => (
-                <div
-                  key={apt.id}
-                  className="flex items-center gap-3 rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-3"
-                >
-                  <Avatar initials={apt.initials} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold truncate">{apt.client}</p>
-                    <p className="text-xs text-[#656565]">{apt.service}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <div className="flex items-center gap-1 text-xs font-semibold text-[#656565]">
-                      <Clock className="w-3 h-3" />
-                      {apt.time}
-                    </div>
-                    <StatusPill status={apt.status} />
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
-
-        <div className="mt-5 lg:mt-0">
-          <h2 className="font-bold pb-3">Serviços mais populares</h2>
-          <div className="flex flex-col gap-2">
-            {[
-              { name: "Corte de Cabelo", count: 48, percent: 80 },
-              { name: "Corte + Barba", count: 31, percent: 52 },
-              { name: "Barba", count: 20, percent: 33 },
-              { name: "Pezinho", count: 9, percent: 15 },
-            ].map((s) => (
-              <div key={s.name} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#FAFAFA] border-2 border-[#F1f1f1] flex items-center justify-center shrink-0">
-                  <Scissors className="w-3.5 h-3.5 text-[#656565]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between mb-1">
-                    <p className="text-sm font-semibold">{s.name}</p>
-                    <p className="text-xs text-[#656565]">{s.count}x</p>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-[#F1f1f1]">
-                    <div
-                      className="h-1.5 rounded-full bg-black"
-                      style={{ width: `${s.percent}%` }}
-                    />
-                  </div>
-                </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#656565] uppercase">
+                  Hoje
+                </span>
+                <CalendarDays className="w-4 h-4 text-[#656565]" />
               </div>
-            ))}
+              <p className="text-2xl font-bold">{todayReservas.length}</p>
+              <p className="text-xs text-[#656565]">
+                {todayConfirmed} confirmados
+              </p>
+            </div>
+            <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#656565] uppercase">
+                  Mês
+                </span>
+                <TrendingUp className="w-4 h-4 text-[#656565]" />
+              </div>
+              <p className="text-2xl font-bold">{formatPrice(monthRevenue)}</p>
+              <p className="text-xs text-[#656565]">
+                {revenueChangePercent === null ? (
+                  "sem dados do mês anterior"
+                ) : (
+                  <span
+                    className={
+                      revenueChangePercent >= 0
+                        ? "text-emerald-600 font-semibold"
+                        : "text-red-500 font-semibold"
+                    }
+                  >
+                    {revenueChangePercent >= 0 ? "+" : ""}
+                    {revenueChangePercent}% vs mês anterior
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#656565] uppercase">
+                  Clientes
+                </span>
+                <Users className="w-4 h-4 text-[#656565]" />
+              </div>
+              <p className="text-2xl font-bold">{dbClients.length}</p>
+              <p className="text-xs text-[#656565]">
+                {newClientsThisMonth} novos este mês
+              </p>
+            </div>
+            <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#656565] uppercase">
+                  Pendentes
+                </span>
+                <AlertCircle className="w-4 h-4 text-[#656565]" />
+              </div>
+              <p className="text-2xl font-bold">{pendentesHoje}</p>
+              <p className="text-xs text-[#656565]">hoje</p>
+            </div>
           </div>
-        </div>
-      </div>
+
+          <div className="lg:grid lg:grid-cols-2 lg:gap-6">
+            <div>
+              <div className="flex items-center justify-between pb-3">
+                <h2 className="font-bold">Próximos agendamentos</h2>
+              </div>
+              <div className="flex flex-col gap-3">
+                {proximosAgendamentos.length === 0 && (
+                  <p className="text-sm text-[#656565] py-4">
+                    Nenhum agendamento para hoje.
+                  </p>
+                )}
+                {proximosAgendamentos.map((apt) => (
+                  <div
+                    key={apt.id}
+                    className="flex items-center gap-3 rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-3"
+                  >
+                    <Avatar initials={getInitials(apt.cliente.nome)} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold truncate">
+                        {apt.cliente.nome}
+                      </p>
+                      <p className="text-xs text-[#656565] truncate">
+                        {apt.servicos.map((s) => s.servico.nome).join(", ")}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <div className="flex items-center gap-1 text-xs font-semibold text-[#656565]">
+                        <Clock className="w-3 h-3" />
+                        {apt.horario}
+                      </div>
+                      <StatusPill status={toAppointmentStatus(apt.status)} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-5 lg:mt-0">
+              <h2 className="font-bold pb-3">Serviços mais populares</h2>
+              <div className="flex flex-col gap-2">
+                {popularServices.length === 0 && (
+                  <p className="text-sm text-[#656565] py-4">
+                    Ainda não há serviços registrados.
+                  </p>
+                )}
+                {popularServices.map((s) => (
+                  <div key={s.name} className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#FAFAFA] border-2 border-[#F1f1f1] flex items-center justify-center shrink-0">
+                      <Scissors className="w-3.5 h-3.5 text-[#656565]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between mb-1">
+                        <p className="text-sm font-semibold">{s.name}</p>
+                        <p className="text-xs text-[#656565]">{s.count}x</p>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-[#F1f1f1]">
+                        <div
+                          className="h-1.5 rounded-full bg-black"
+                          style={{ width: `${s.percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -436,7 +370,7 @@ type ReservaApi = {
   horario: string;
   total: number;
   status: ReservaStatus;
-  cliente: { nome: string };
+  cliente: { id: string; nome: string; telefone: string };
   barbeiro: { nome: string };
   servicos: Array<{ servico: { nome: string; preco: number } }>;
 };
@@ -451,6 +385,10 @@ function sameDay(a: Date, b: Date) {
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
   );
+}
+
+function sameMonth(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
 }
 
 function startOfDay(date: Date) {
@@ -842,42 +780,48 @@ function Agenda() {
 
 function Clientes() {
   const [search, setSearch] = useState("");
-  const [dbClients, setDbClients] = useState<
-    Array<{
-      id: string;
-      nome: string;
-      telefone: string;
-      email: string | null;
-      createdAt: string;
-    }>
-  >([]);
+  const [dbClients, setDbClients] = useState<ClienteApi[]>([]);
+  const [reservas, setReservas] = useState<ReservaApi[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/clientes")
-      .then((r) => r.json())
-      .then((data) => Array.isArray(data) && setDbClients(data))
-      .catch(() => {});
+    Promise.all([
+      fetch("/api/clientes").then((r) => r.json()),
+      fetch("/api/reservas").then((r) => r.json()),
+    ])
+      .then(([clientesData, reservasData]) => {
+        if (Array.isArray(clientesData)) setDbClients(clientesData);
+        if (Array.isArray(reservasData)) setReservas(reservasData);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  const allClients = [
-    ...dbClients.map((c) => ({
-      id: c.id,
-      name: c.nome,
-      initials: c.nome
-        .trim()
-        .split(" ")
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((w: string) => w[0].toUpperCase())
-        .join(""),
-      phone: c.telefone,
-      lastVisit: new Date(c.createdAt).toLocaleDateString("pt-BR"),
-      totalVisits: 1,
-      totalSpent: "–",
-      isNew: true,
-    })),
-    ...clients.filter((c) => !dbClients.some((d) => d.telefone === c.phone)),
-  ];
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+  const allClients = useMemo(() => {
+    return dbClients.map((c) => {
+      const clientReservas = reservas.filter((r) => r.cliente.id === c.id);
+      const concluidas = clientReservas.filter((r) => r.status === "CONCLUIDO");
+      const lastReserva = [...clientReservas].sort(
+        (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime(),
+      )[0];
+      return {
+        id: c.id,
+        name: c.nome,
+        initials: getInitials(c.nome),
+        phone: c.telefone,
+        lastVisit: lastReserva
+          ? new Date(lastReserva.data).toLocaleDateString("pt-BR")
+          : new Date(c.createdAt).toLocaleDateString("pt-BR"),
+        totalVisits: concluidas.length,
+        totalSpent: formatPrice(
+          concluidas.reduce((sum, r) => sum + r.total, 0),
+        ),
+        isNew: Date.now() - new Date(c.createdAt).getTime() < THIRTY_DAYS_MS,
+      };
+    });
+  }, [dbClients, reservas]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return allClients;
@@ -913,52 +857,58 @@ function Clientes() {
         />
       </div>
 
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-4 lg:gap-4">
-        {filtered.length === 0 && (
-          <p className="text-center text-[#656565] py-8 lg:col-span-2">
-            Nenhum cliente encontrado.
-          </p>
-        )}
-        {filtered.map((client) => (
-          <div
-            key={client.id}
-            className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3"
-          >
-            <div className="flex items-center gap-3">
-              <Avatar initials={client.initials} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-bold truncate">{client.name}</p>
-                  {client.isNew && (
-                    <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-semibold text-emerald-700 shrink-0">
-                      Novo
-                    </span>
-                  )}
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-4 lg:gap-4">
+          {filtered.length === 0 && (
+            <p className="text-center text-[#656565] py-8 lg:col-span-2">
+              Nenhum cliente encontrado.
+            </p>
+          )}
+          {filtered.map((client) => (
+            <div
+              key={client.id}
+              className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3"
+            >
+              <div className="flex items-center gap-3">
+                <Avatar initials={client.initials} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold truncate">{client.name}</p>
+                    {client.isNew && (
+                      <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-semibold text-emerald-700 shrink-0">
+                        Novo
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-[#656565]">
+                    <Phone className="w-3 h-3" />
+                    {client.phone}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-[#656565]">
-                  <Phone className="w-3 h-3" />
-                  {client.phone}
+                <ChevronRight className="w-4 h-4 text-[#656565] shrink-0" />
+              </div>
+              <div className="flex justify-between pt-1 border-t border-[#F1f1f1]">
+                <div className="text-center">
+                  <p className="text-xs text-[#656565]">Visitas</p>
+                  <p className="font-bold text-sm">{client.totalVisits}x</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-[#656565]">Total gasto</p>
+                  <p className="font-bold text-sm">{client.totalSpent}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-[#656565]">Última visita</p>
+                  <p className="font-bold text-sm">{client.lastVisit}</p>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-[#656565] shrink-0" />
             </div>
-            <div className="flex justify-between pt-1 border-t border-[#F1f1f1]">
-              <div className="text-center">
-                <p className="text-xs text-[#656565]">Visitas</p>
-                <p className="font-bold text-sm">{client.totalVisits}x</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-[#656565]">Total gasto</p>
-                <p className="font-bold text-sm">{client.totalSpent}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-[#656565]">Última visita</p>
-                <p className="font-bold text-sm">{client.lastVisit}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1027,8 +977,115 @@ function getInitials(name: string) {
     .join("");
 }
 
+type PerfilData = {
+  nomeBarbearia: string;
+  endereco: string;
+  telefone: string;
+  barbeiroNome: string;
+  barbeiroDescricao: string;
+  barbeiroFoto: string;
+};
+
+const DEFAULT_PERFIL: PerfilData = {
+  nomeBarbearia: "YvisonBarber",
+  endereco: "",
+  telefone: "",
+  barbeiroNome: "Yvison",
+  barbeiroDescricao: "",
+  barbeiroFoto: "",
+};
+
 function Config() {
   const { services, setServices, barbers, setBarbers } = useStore();
+
+  const [perfil, setPerfil] = useState<PerfilData>(DEFAULT_PERFIL);
+
+  useEffect(() => {
+    fetch("/api/perfil")
+      .then((r) => r.json())
+      .then((data) =>
+        setPerfil({
+          nomeBarbearia: data.nomeBarbearia ?? DEFAULT_PERFIL.nomeBarbearia,
+          endereco: data.endereco ?? "",
+          telefone: data.telefone ?? "",
+          barbeiroNome: data.barbeiroNome ?? DEFAULT_PERFIL.barbeiroNome,
+          barbeiroDescricao: data.barbeiroDescricao ?? "",
+          barbeiroFoto: data.barbeiroFoto ?? "",
+        }),
+      )
+      .catch(() => {});
+  }, []);
+
+  async function savePerfil(next: PerfilData) {
+    setPerfil(next);
+    try {
+      await fetch("/api/perfil", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      });
+    } catch {}
+  }
+
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    nome: "",
+    descricao: "",
+    foto: "",
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  function openEditProfile() {
+    setProfileForm({
+      nome: perfil.barbeiroNome,
+      descricao: perfil.barbeiroDescricao,
+      foto: perfil.barbeiroFoto,
+    });
+    setProfileModalOpen(true);
+  }
+
+  async function saveProfile() {
+    if (!profileForm.nome.trim()) return;
+    setSavingProfile(true);
+    await savePerfil({
+      ...perfil,
+      barbeiroNome: profileForm.nome.trim(),
+      barbeiroDescricao: profileForm.descricao.trim(),
+      barbeiroFoto: profileForm.foto,
+    });
+    setSavingProfile(false);
+    setProfileModalOpen(false);
+  }
+
+  const [barbeariaModalOpen, setBarbeariaModalOpen] = useState(false);
+  const [barbeariaForm, setBarbeariaForm] = useState({
+    nome: "",
+    endereco: "",
+    telefone: "",
+  });
+  const [savingBarbearia, setSavingBarbearia] = useState(false);
+
+  function openEditBarbearia() {
+    setBarbeariaForm({
+      nome: perfil.nomeBarbearia,
+      endereco: perfil.endereco,
+      telefone: perfil.telefone,
+    });
+    setBarbeariaModalOpen(true);
+  }
+
+  async function saveBarbearia() {
+    if (!barbeariaForm.nome.trim()) return;
+    setSavingBarbearia(true);
+    await savePerfil({
+      ...perfil,
+      nomeBarbearia: barbeariaForm.nome.trim(),
+      endereco: barbeariaForm.endereco.trim(),
+      telefone: barbeariaForm.telefone.trim(),
+    });
+    setSavingBarbearia(false);
+    setBarbeariaModalOpen(false);
+  }
 
   const [horario, setHorario] = useState({
     horaInicio: "08:00",
@@ -1105,6 +1162,7 @@ function Config() {
     serviceIds: [] as number[],
     photo: "",
   });
+  const [savingBarber, setSavingBarber] = useState(false);
 
   function openAddService() {
     setServiceForm({
@@ -1197,42 +1255,68 @@ function Config() {
     }));
   }
 
-  function saveBarber() {
+  async function saveBarber() {
     if (!barberForm.name.trim()) return;
-    if (barberModal.editing) {
-      setBarbers((prev) =>
-        prev.map((b) =>
-          b.id === barberModal.editing!.id
-            ? {
-                ...b,
-                name: barberForm.name.trim(),
-                initials: getInitials(barberForm.name),
-                description: barberForm.description.trim(),
-                serviceIds: barberForm.serviceIds,
-                photo: barberForm.photo || undefined,
-              }
-            : b,
-        ),
-      );
-    } else {
-      const newId = Math.max(0, ...barbers.map((b) => b.id)) + 1;
-      setBarbers((prev) => [
-        ...prev,
-        {
-          id: newId,
-          name: barberForm.name.trim(),
-          initials: getInitials(barberForm.name),
-          description: barberForm.description.trim(),
-          serviceIds: barberForm.serviceIds,
-          photo: barberForm.photo || undefined,
-        },
-      ]);
-    }
-    setBarberModal({ open: false, editing: null });
+    setSavingBarber(true);
+    try {
+      if (barberModal.editing) {
+        const editingId = barberModal.editing.id;
+        await fetch(`/api/barbeiros/${editingId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nome: barberForm.name.trim(),
+            descricao: barberForm.description.trim(),
+            foto: barberForm.photo,
+          }),
+        });
+        setBarbers((prev) =>
+          prev.map((b) =>
+            b.id === editingId
+              ? {
+                  ...b,
+                  name: barberForm.name.trim(),
+                  initials: getInitials(barberForm.name),
+                  description: barberForm.description.trim(),
+                  serviceIds: barberForm.serviceIds,
+                  photo: barberForm.photo || undefined,
+                }
+              : b,
+          ),
+        );
+      } else {
+        const res = await fetch("/api/barbeiros", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nome: barberForm.name.trim(),
+            descricao: barberForm.description.trim(),
+            foto: barberForm.photo,
+          }),
+        });
+        const created = await res.json();
+        setBarbers((prev) => [
+          ...prev,
+          {
+            id: created.id,
+            name: barberForm.name.trim(),
+            initials: getInitials(barberForm.name),
+            description: barberForm.description.trim(),
+            serviceIds: barberForm.serviceIds,
+            photo: barberForm.photo || undefined,
+          },
+        ]);
+      }
+      setBarberModal({ open: false, editing: null });
+    } catch {}
+    setSavingBarber(false);
   }
 
-  function deleteBarber(id: number) {
+  async function deleteBarber(id: string) {
     setBarbers((prev) => prev.filter((b) => b.id !== id));
+    try {
+      await fetch(`/api/barbeiros/${id}`, { method: "DELETE" });
+    } catch {}
   }
 
   return (
@@ -1240,13 +1324,20 @@ function Config() {
       <h1 className="text-2xl font-bold">Configurações</h1>
 
       <div className="flex flex-col items-center gap-3 py-4">
-        <Avatar initials="YV" size="lg" />
+        <Avatar
+          initials={getInitials(perfil.barbeiroNome)}
+          src={perfil.barbeiroFoto || undefined}
+          size="lg"
+        />
         <div className="text-center">
-          <p className="font-bold text-lg">Yvison</p>
-          <p className="text-sm text-[#656565]">Barbeiro profissional</p>
+          <p className="font-bold text-lg">{perfil.barbeiroNome}</p>
+          <p className="text-sm text-[#656565]">
+            {perfil.barbeiroDescricao || "Barbeiro profissional"}
+          </p>
         </div>
         <button
           type="button"
+          onClick={openEditProfile}
           className="rounded-full border-2 border-[#F1f1f1] bg-[#FAFAFA] px-5 py-2 text-sm font-semibold"
         >
           Editar perfil
@@ -1260,14 +1351,16 @@ function Config() {
         </p>
         <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
           {[
-            { label: "Nome da barbearia", value: "YvisonBarber" },
-            { label: "Endereço", value: "Av. São Sebastião, 357" },
-            { label: "Telefone", value: "(11) 99999-0000" },
+            { label: "Nome da barbearia", value: perfil.nomeBarbearia },
+            { label: "Endereço", value: perfil.endereco || "Não informado" },
+            { label: "Telefone", value: perfil.telefone || "Não informado" },
           ].map((item, i, arr) => (
-            <div
+            <button
+              type="button"
               key={item.label}
+              onClick={openEditBarbearia}
               className={[
-                "flex items-center justify-between px-4 py-3.5",
+                "w-full flex items-center justify-between px-4 py-3.5 text-left",
                 i < arr.length - 1 ? "border-b border-[#F1f1f1]" : "",
               ].join(" ")}
             >
@@ -1276,7 +1369,7 @@ function Config() {
                 <p className="text-sm text-[#656565]">{item.value}</p>
                 <ChevronRight className="w-4 h-4 text-[#656565]" />
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -1764,10 +1857,10 @@ function Config() {
           <button
             type="button"
             onClick={saveBarber}
-            disabled={!barberForm.name.trim()}
+            disabled={!barberForm.name.trim() || savingBarber}
             className="w-full rounded-full bg-black text-white py-3.5 text-sm font-semibold disabled:opacity-40"
           >
-            Finalizar
+            {savingBarber ? "Salvando..." : "Finalizar"}
           </button>
         }
       >
@@ -1870,6 +1963,146 @@ function Config() {
               );
             })}
           </div>
+        </div>
+      </BottomSheet>
+
+      {/* Modal: Perfil do barbeiro */}
+      <BottomSheet
+        open={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        title="Editar perfil"
+        footer={
+          <button
+            type="button"
+            onClick={saveProfile}
+            disabled={!profileForm.nome.trim() || savingProfile}
+            className="w-full rounded-full bg-black text-white py-3.5 text-sm font-semibold disabled:opacity-40"
+          >
+            {savingProfile ? "Salvando..." : "Salvar"}
+          </button>
+        }
+      >
+        <div className="flex justify-center pb-1">
+          <label className="relative cursor-pointer">
+            <div className="w-20 h-20 rounded-full bg-[#F1f1f1] border-2 border-[#E0E0E0] overflow-hidden flex items-center justify-center">
+              {profileForm.foto ? (
+                <img
+                  src={profileForm.foto}
+                  alt="foto"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Camera className="w-7 h-7 text-[#999]" />
+              )}
+            </div>
+            <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-black border-2 border-white flex items-center justify-center">
+              <Plus className="w-3 h-3 text-white" />
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) =>
+                  setProfileForm((p) => ({
+                    ...p,
+                    foto: ev.target?.result as string,
+                  }));
+                reader.readAsDataURL(file);
+              }}
+            />
+          </label>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+            Nome
+          </label>
+          <input
+            type="text"
+            value={profileForm.nome}
+            onChange={(e) =>
+              setProfileForm((p) => ({ ...p, nome: e.target.value }))
+            }
+            placeholder="Ex: Yvison"
+            className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+            Descrição
+          </label>
+          <input
+            type="text"
+            value={profileForm.descricao}
+            onChange={(e) =>
+              setProfileForm((p) => ({ ...p, descricao: e.target.value }))
+            }
+            placeholder="Ex: Barbeiro profissional"
+            className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
+          />
+        </div>
+      </BottomSheet>
+
+      {/* Modal: Barbearia */}
+      <BottomSheet
+        open={barbeariaModalOpen}
+        onClose={() => setBarbeariaModalOpen(false)}
+        title="Editar barbearia"
+        footer={
+          <button
+            type="button"
+            onClick={saveBarbearia}
+            disabled={!barbeariaForm.nome.trim() || savingBarbearia}
+            className="w-full rounded-full bg-black text-white py-3.5 text-sm font-semibold disabled:opacity-40"
+          >
+            {savingBarbearia ? "Salvando..." : "Salvar"}
+          </button>
+        }
+      >
+        <div>
+          <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+            Nome da barbearia
+          </label>
+          <input
+            type="text"
+            value={barbeariaForm.nome}
+            onChange={(e) =>
+              setBarbeariaForm((p) => ({ ...p, nome: e.target.value }))
+            }
+            placeholder="Ex: YvisonBarber"
+            className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+            Endereço
+          </label>
+          <input
+            type="text"
+            value={barbeariaForm.endereco}
+            onChange={(e) =>
+              setBarbeariaForm((p) => ({ ...p, endereco: e.target.value }))
+            }
+            placeholder="Ex: Av. São Sebastião, 357"
+            className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+            Telefone
+          </label>
+          <input
+            type="text"
+            value={barbeariaForm.telefone}
+            onChange={(e) =>
+              setBarbeariaForm((p) => ({ ...p, telefone: e.target.value }))
+            }
+            placeholder="Ex: (11) 99999-0000"
+            className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
+          />
         </div>
       </BottomSheet>
     </div>
@@ -2231,7 +2464,7 @@ const Admin = () => {
         <div className="flex items-center gap-2 px-2 pb-8">
           <Avatar initials="YV" />
           <div className="min-w-0">
-            <p className="font-bold text-sm truncate">YvisonBarber</p>
+            <p className="font-bold text-sm truncate">Barber</p>
             <p className="text-xs text-[#656565] truncate">Painel admin</p>
           </div>
         </div>

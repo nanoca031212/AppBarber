@@ -174,7 +174,7 @@ const Header = () => {
       <div className="py-6  space-y-6 ">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-xl font-bold text-black">YvisonBarber</h1>
+            <h1 className="text-xl font-bold text-black">Barber</h1>
           </div>
           <div className="hidden lg:flex items-center gap-6">
             <Button

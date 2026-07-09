@@ -18,25 +18,27 @@ model Cliente {
 }
 
 model Barbeiro {
-  id        String    @id @default(cuid())
-  nome      String
-  descricao String?
-  foto      String?
-  ativo     Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  reservas  Reserva[]
+  id           String    @id @default(cuid())
+  nome         String
+  descricao    String?
+  foto         String?
+  fotoPosicao  String?
+  ativo        Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  reservas     Reserva[]
 }
 
 model Servico {
-  id        String           @id @default(cuid())
-  nome      String
-  descricao String?
-  preco     Float
-  duracao   Int
-  foto      String?
-  ativo     Boolean          @default(true)
-  createdAt DateTime         @default(now())
-  reservas  ReservaServico[]
+  id           String           @id @default(cuid())
+  nome         String
+  descricao    String?
+  preco        Float
+  duracao      Int
+  foto         String?
+  fotoPosicao  String?
+  ativo        Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  reservas     ReservaServico[]
 }
 
 model Reserva {
@@ -83,10 +85,10 @@ model HorarioFuncionamento {
 
 model PerfilNegocio {
   id                 String   @id @default(cuid())
-  nomeBarbearia      String   @default("YvisonBarber")
+  nomeBarbearia      String
   endereco           String?
   telefone           String?
-  barbeiroNome       String   @default("Yvison")
+  barbeiroNome       String
   barbeiroDescricao  String?
   barbeiroFoto       String?
   updatedAt          DateTime @updatedAt

@@ -32,9 +32,12 @@ import {
   X,
   UserPlus,
   Camera,
+  Loader2,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { FocalPointPicker } from "@/app/components/focal-point-picker";
+import { uploadPhoto } from "@/lib/upload-photo";
 
 type AdminTab = "dashboard" | "agenda" | "clientes" | "gestor" | "config";
 
@@ -91,10 +94,12 @@ function StatusPill({ status }: { status: AppointmentStatus }) {
 function Avatar({
   initials,
   src,
+  position,
   size = "md",
 }: {
   initials: string;
   src?: string;
+  position?: string;
   size?: "sm" | "md" | "lg";
 }) {
   const sizes = {
@@ -105,7 +110,12 @@ function Avatar({
   if (src) {
     return (
       <div className={`${sizes[size]} rounded-full overflow-hidden shrink-0`}>
-        <img src={src} alt={initials} className="w-full h-full object-cover" />
+        <img
+          src={src}
+          alt={initials}
+          className="w-full h-full object-cover"
+          style={{ objectPosition: position }}
+        />
       </div>
     );
   }
@@ -216,7 +226,7 @@ function Dashboard() {
               month: "long",
             })}
           </p>
-          <h1 className="text-2xl font-bold">Olá, Yvison</h1>
+          <h1 className="text-2xl font-bold">Olá, Barber</h1>
         </div>
         <Avatar initials="YV" size="lg" />
       </div>
@@ -987,10 +997,10 @@ type PerfilData = {
 };
 
 const DEFAULT_PERFIL: PerfilData = {
-  nomeBarbearia: "YvisonBarber",
+  nomeBarbearia: "",
   endereco: "",
   telefone: "",
-  barbeiroNome: "Yvison",
+  barbeiroNome: "",
   barbeiroDescricao: "",
   barbeiroFoto: "",
 };
@@ -1034,6 +1044,7 @@ function Config() {
     foto: "",
   });
   const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingProfile, setUploadingProfile] = useState(false);
 
   function openEditProfile() {
     setProfileForm({
@@ -1150,6 +1161,7 @@ function Config() {
     duration: 30,
     price: "",
     photo: "",
+    photoPosition: "50% 50%",
   });
 
   const [barberModal, setBarberModal] = useState<{
@@ -1159,10 +1171,14 @@ function Config() {
   const [barberForm, setBarberForm] = useState({
     name: "",
     description: "",
-    serviceIds: [] as number[],
+    serviceIds: [] as string[],
     photo: "",
+    photoPosition: "50% 50%",
   });
   const [savingBarber, setSavingBarber] = useState(false);
+  const [savingService, setSavingService] = useState(false);
+  const [uploadingService, setUploadingService] = useState(false);
+  const [uploadingBarber, setUploadingBarber] = useState(false);
 
   function openAddService() {
     setServiceForm({
@@ -1171,6 +1187,7 @@ function Config() {
       duration: 30,
       price: "",
       photo: "",
+      photoPosition: "50% 50%",
     });
     setServiceModal({ open: true, editing: null });
   }
@@ -1182,46 +1199,102 @@ function Config() {
       duration: s.duration,
       price: String(s.price),
       photo: s.photo ?? "",
+      photoPosition: s.photoPosition ?? "50% 50%",
     });
     setServiceModal({ open: true, editing: s });
   }
 
-  function saveService() {
+  async function saveService() {
     if (!serviceForm.name.trim()) return;
     const price = parseFloat(serviceForm.price.replace(",", ".")) || 0;
-    if (serviceModal.editing) {
-      setServices((prev) =>
-        prev.map((s) =>
-          s.id === serviceModal.editing!.id
-            ? {
-                ...s,
-                name: serviceForm.name.trim(),
-                description: serviceForm.description.trim(),
-                duration: serviceForm.duration,
-                price,
-                photo: serviceForm.photo || undefined,
-              }
-            : s,
-        ),
-      );
-    } else {
-      const newId = Math.max(0, ...services.map((s) => s.id)) + 1;
-      setServices((prev) => [
-        ...prev,
-        {
-          id: newId,
-          name: serviceForm.name.trim(),
-          description: serviceForm.description.trim(),
-          duration: serviceForm.duration,
-          price,
-          photo: serviceForm.photo || undefined,
-        },
-      ]);
-    }
-    setServiceModal({ open: false, editing: null });
+    setSavingService(true);
+    try {
+      const editingId = serviceModal.editing?.id;
+      const isPlaceholder = editingId?.startsWith("default-");
+      if (editingId && !isPlaceholder) {
+        const res = await fetch(`/api/servicos/${editingId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nome: serviceForm.name.trim(),
+            descricao: serviceForm.description.trim(),
+            preco: price,
+            duracao: serviceForm.duration,
+            foto: serviceForm.photo,
+            fotoPosicao: serviceForm.photo ? serviceForm.photoPosition : null,
+          }),
+        });
+        if (!res.ok) throw new Error("Falha ao salvar serviço");
+        setServices((prev) =>
+          prev.map((s) =>
+            s.id === editingId
+              ? {
+                  ...s,
+                  name: serviceForm.name.trim(),
+                  description: serviceForm.description.trim(),
+                  duration: serviceForm.duration,
+                  price,
+                  photo: serviceForm.photo || undefined,
+                  photoPosition: serviceForm.photo
+                    ? serviceForm.photoPosition
+                    : undefined,
+                }
+              : s,
+          ),
+        );
+      } else {
+        // No real DB record yet — either adding a new service, or editing
+        // one of the client-side placeholders shown when the list is empty.
+        const res = await fetch("/api/servicos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nome: serviceForm.name.trim(),
+            descricao: serviceForm.description.trim(),
+            preco: price,
+            duracao: serviceForm.duration,
+            foto: serviceForm.photo,
+            fotoPosicao: serviceForm.photo ? serviceForm.photoPosition : null,
+          }),
+        });
+        if (!res.ok) throw new Error("Falha ao criar serviço");
+        const created = await res.json();
+        setServices((prev) => [
+          ...prev.filter((s) => s.id !== editingId),
+          {
+            id: created.id,
+            name: serviceForm.name.trim(),
+            description: serviceForm.description.trim(),
+            duration: serviceForm.duration,
+            price,
+            photo: serviceForm.photo || undefined,
+            photoPosition: serviceForm.photo
+              ? serviceForm.photoPosition
+              : undefined,
+          },
+        ]);
+        if (editingId) {
+          setBarbers((prev) =>
+            prev.map((b) =>
+              b.serviceIds.includes(editingId)
+                ? {
+                    ...b,
+                    serviceIds: [
+                      ...b.serviceIds.filter((sid) => sid !== editingId),
+                      created.id,
+                    ],
+                  }
+                : b,
+            ),
+          );
+        }
+      }
+      setServiceModal({ open: false, editing: null });
+    } catch {}
+    setSavingService(false);
   }
 
-  function deleteService(id: number) {
+  async function deleteService(id: string) {
     setServices((prev) => prev.filter((s) => s.id !== id));
     setBarbers((prev) =>
       prev.map((b) => ({
@@ -1229,10 +1302,20 @@ function Config() {
         serviceIds: b.serviceIds.filter((sid) => sid !== id),
       })),
     );
+    if (id.startsWith("default-")) return;
+    try {
+      await fetch(`/api/servicos/${id}`, { method: "DELETE" });
+    } catch {}
   }
 
   function openAddBarber() {
-    setBarberForm({ name: "", description: "", serviceIds: [], photo: "" });
+    setBarberForm({
+      name: "",
+      description: "",
+      serviceIds: [],
+      photo: "",
+      photoPosition: "50% 50%",
+    });
     setBarberModal({ open: true, editing: null });
   }
 
@@ -1242,11 +1325,12 @@ function Config() {
       description: b.description,
       serviceIds: b.serviceIds,
       photo: b.photo ?? "",
+      photoPosition: b.photoPosition ?? "50% 50%",
     });
     setBarberModal({ open: true, editing: b });
   }
 
-  function toggleBarberService(sid: number) {
+  function toggleBarberService(sid: string) {
     setBarberForm((prev) => ({
       ...prev,
       serviceIds: prev.serviceIds.includes(sid)
@@ -1259,17 +1343,20 @@ function Config() {
     if (!barberForm.name.trim()) return;
     setSavingBarber(true);
     try {
-      if (barberModal.editing) {
-        const editingId = barberModal.editing.id;
-        await fetch(`/api/barbeiros/${editingId}`, {
+      const editingId = barberModal.editing?.id;
+      const isPlaceholder = editingId?.startsWith("default-");
+      if (editingId && !isPlaceholder) {
+        const res = await fetch(`/api/barbeiros/${editingId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             nome: barberForm.name.trim(),
             descricao: barberForm.description.trim(),
             foto: barberForm.photo,
+            fotoPosicao: barberForm.photo ? barberForm.photoPosition : null,
           }),
         });
+        if (!res.ok) throw new Error("Falha ao salvar barbeiro");
         setBarbers((prev) =>
           prev.map((b) =>
             b.id === editingId
@@ -1280,11 +1367,16 @@ function Config() {
                   description: barberForm.description.trim(),
                   serviceIds: barberForm.serviceIds,
                   photo: barberForm.photo || undefined,
+                  photoPosition: barberForm.photo
+                    ? barberForm.photoPosition
+                    : undefined,
                 }
               : b,
           ),
         );
       } else {
+        // No real DB record yet — either adding a new barber, or editing
+        // the client-side placeholder shown when the team is empty.
         const res = await fetch("/api/barbeiros", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1292,11 +1384,13 @@ function Config() {
             nome: barberForm.name.trim(),
             descricao: barberForm.description.trim(),
             foto: barberForm.photo,
+            fotoPosicao: barberForm.photo ? barberForm.photoPosition : null,
           }),
         });
+        if (!res.ok) throw new Error("Falha ao criar barbeiro");
         const created = await res.json();
         setBarbers((prev) => [
-          ...prev,
+          ...prev.filter((b) => b.id !== editingId),
           {
             id: created.id,
             name: barberForm.name.trim(),
@@ -1304,6 +1398,9 @@ function Config() {
             description: barberForm.description.trim(),
             serviceIds: barberForm.serviceIds,
             photo: barberForm.photo || undefined,
+            photoPosition: barberForm.photo
+              ? barberForm.photoPosition
+              : undefined,
           },
         ]);
       }
@@ -1314,6 +1411,7 @@ function Config() {
 
   async function deleteBarber(id: string) {
     setBarbers((prev) => prev.filter((b) => b.id !== id));
+    if (id.startsWith("default-")) return;
     try {
       await fetch(`/api/barbeiros/${id}`, { method: "DELETE" });
     } catch {}
@@ -1568,6 +1666,7 @@ function Config() {
                     src={s.photo}
                     alt={s.name}
                     className="w-full h-full object-cover"
+                    style={{ objectPosition: s.photoPosition }}
                   />
                 ) : (
                   <Scissors className="w-4 h-4 text-white" />
@@ -1638,7 +1737,11 @@ function Config() {
               className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3"
             >
               <div className="flex items-center gap-3">
-                <Avatar initials={b.initials} src={b.photo} />
+                <Avatar
+                  initials={b.initials}
+                  src={b.photo}
+                  position={b.photoPosition}
+                />
                 <div className="flex-1 min-w-0">
                   <p className="font-bold">{b.name}</p>
                   {b.description && (
@@ -1738,10 +1841,12 @@ function Config() {
           <button
             type="button"
             onClick={saveService}
-            disabled={!serviceForm.name.trim()}
+            disabled={
+              !serviceForm.name.trim() || savingService || uploadingService
+            }
             className="w-full rounded-full bg-black text-white py-3.5 text-sm font-semibold disabled:opacity-40"
           >
-            Finalizar
+            {savingService ? "Salvando..." : "Finalizar"}
           </button>
         }
       >
@@ -1753,9 +1858,15 @@ function Config() {
                   src={serviceForm.photo}
                   alt="foto"
                   className="w-full h-full object-cover"
+                  style={{ objectPosition: serviceForm.photoPosition }}
                 />
               ) : (
                 <Camera className="w-7 h-7 text-[#999]" />
+              )}
+              {uploadingService && (
+                <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 animate-spin text-black" />
+                </div>
               )}
             </div>
             <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-black border-2 border-white flex items-center justify-center">
@@ -1765,20 +1876,34 @@ function Config() {
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) =>
+                setUploadingService(true);
+                try {
+                  const url = await uploadPhoto(file);
                   setServiceForm((p) => ({
                     ...p,
-                    photo: ev.target?.result as string,
+                    photo: url,
+                    photoPosition: "50% 50%",
                   }));
-                reader.readAsDataURL(file);
+                } catch {
+                } finally {
+                  setUploadingService(false);
+                }
               }}
             />
           </label>
         </div>
+        {serviceForm.photo && (
+          <FocalPointPicker
+            src={serviceForm.photo}
+            value={serviceForm.photoPosition}
+            onChange={(v) =>
+              setServiceForm((p) => ({ ...p, photoPosition: v }))
+            }
+          />
+        )}
         <div>
           <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
             Nome
@@ -1857,7 +1982,9 @@ function Config() {
           <button
             type="button"
             onClick={saveBarber}
-            disabled={!barberForm.name.trim() || savingBarber}
+            disabled={
+              !barberForm.name.trim() || savingBarber || uploadingBarber
+            }
             className="w-full rounded-full bg-black text-white py-3.5 text-sm font-semibold disabled:opacity-40"
           >
             {savingBarber ? "Salvando..." : "Finalizar"}
@@ -1872,9 +1999,15 @@ function Config() {
                   src={barberForm.photo}
                   alt="foto"
                   className="w-full h-full object-cover"
+                  style={{ objectPosition: barberForm.photoPosition }}
                 />
               ) : (
                 <Camera className="w-7 h-7 text-[#999]" />
+              )}
+              {uploadingBarber && (
+                <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-full">
+                  <Loader2 className="w-5 h-5 animate-spin text-black" />
+                </div>
               )}
             </div>
             <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-black border-2 border-white flex items-center justify-center">
@@ -1884,20 +2017,32 @@ function Config() {
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) =>
+                setUploadingBarber(true);
+                try {
+                  const url = await uploadPhoto(file);
                   setBarberForm((p) => ({
                     ...p,
-                    photo: ev.target?.result as string,
+                    photo: url,
+                    photoPosition: "50% 50%",
                   }));
-                reader.readAsDataURL(file);
+                } catch {
+                } finally {
+                  setUploadingBarber(false);
+                }
               }}
             />
           </label>
         </div>
+        {barberForm.photo && (
+          <FocalPointPicker
+            src={barberForm.photo}
+            value={barberForm.photoPosition}
+            onChange={(v) => setBarberForm((p) => ({ ...p, photoPosition: v }))}
+          />
+        )}
         <div>
           <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
             Nome do barbeiro
@@ -1975,7 +2120,9 @@ function Config() {
           <button
             type="button"
             onClick={saveProfile}
-            disabled={!profileForm.nome.trim() || savingProfile}
+            disabled={
+              !profileForm.nome.trim() || savingProfile || uploadingProfile
+            }
             className="w-full rounded-full bg-black text-white py-3.5 text-sm font-semibold disabled:opacity-40"
           >
             {savingProfile ? "Salvando..." : "Salvar"}
@@ -1994,6 +2141,11 @@ function Config() {
               ) : (
                 <Camera className="w-7 h-7 text-[#999]" />
               )}
+              {uploadingProfile && (
+                <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-full">
+                  <Loader2 className="w-5 h-5 animate-spin text-black" />
+                </div>
+              )}
             </div>
             <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-black border-2 border-white flex items-center justify-center">
               <Plus className="w-3 h-3 text-white" />
@@ -2002,16 +2154,17 @@ function Config() {
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) =>
-                  setProfileForm((p) => ({
-                    ...p,
-                    foto: ev.target?.result as string,
-                  }));
-                reader.readAsDataURL(file);
+                setUploadingProfile(true);
+                try {
+                  const url = await uploadPhoto(file);
+                  setProfileForm((p) => ({ ...p, foto: url }));
+                } catch {
+                } finally {
+                  setUploadingProfile(false);
+                }
               }}
             />
           </label>
@@ -2026,7 +2179,7 @@ function Config() {
             onChange={(e) =>
               setProfileForm((p) => ({ ...p, nome: e.target.value }))
             }
-            placeholder="Ex: Yvison"
+            placeholder="Ex: Fabio"
             className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
           />
         </div>
@@ -2072,7 +2225,7 @@ function Config() {
             onChange={(e) =>
               setBarbeariaForm((p) => ({ ...p, nome: e.target.value }))
             }
-            placeholder="Ex: YvisonBarber"
+            placeholder="Ex: Fabio Barber"
             className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
           />
         </div>
@@ -2158,7 +2311,7 @@ const pixelList: PixelConfig[] = [
 const recentEvents = [
   {
     name: "page_view",
-    desc: "Visitou a página do Yvison",
+    desc: "Visitou a página do Fabio",
     time: "2 min atrás",
   },
   {
@@ -2173,7 +2326,7 @@ const recentEvents = [
   },
   {
     name: "page_view",
-    desc: "Visitou a página do Yvison",
+    desc: "Visitou a página do Fabio",
     time: "12 min atrás",
   },
   { name: "click_whatsapp", desc: "Clicou no WhatsApp", time: "18 min atrás" },

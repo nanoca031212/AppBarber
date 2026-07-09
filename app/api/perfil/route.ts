@@ -5,10 +5,10 @@ const PERFIL_ID = "default";
 
 const defaults = {
   id: PERFIL_ID,
-  nomeBarbearia: "YvisonBarber",
+  nomeBarbearia: "Fabio Barber",
   endereco: null as string | null,
   telefone: null as string | null,
-  barbeiroNome: "Yvison",
+  barbeiroNome: "Fabio",
   barbeiroDescricao: null as string | null,
   barbeiroFoto: null as string | null,
 };

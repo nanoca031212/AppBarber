@@ -6,19 +6,22 @@ export async function PATCH(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
-  const { nome, descricao, foto, fotoPosicao } = await req.json();
+  const { nome, descricao, preco, duracao, foto, fotoPosicao } =
+    await req.json();
 
-  const barbeiro = await prisma.barbeiro.update({
+  const servico = await prisma.servico.update({
     where: { id },
     data: {
       nome,
       descricao: descricao || null,
+      preco,
+      duracao,
       foto: foto || null,
       fotoPosicao: fotoPosicao || null,
     },
   });
 
-  return NextResponse.json(barbeiro);
+  return NextResponse.json(servico);
 }
 
 export async function DELETE(
@@ -27,10 +30,10 @@ export async function DELETE(
 ) {
   const { id } = await ctx.params;
 
-  const barbeiro = await prisma.barbeiro.update({
+  const servico = await prisma.servico.update({
     where: { id },
     data: { ativo: false },
   });
 
-  return NextResponse.json(barbeiro);
+  return NextResponse.json(servico);
 }

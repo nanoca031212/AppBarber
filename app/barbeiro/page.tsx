@@ -217,7 +217,7 @@ const BarbeiroContent = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(() =>
     startOfDay(new Date()),
   );
-  const [selectedServices, setSelectedServices] = useState<Set<number>>(
+  const [selectedServices, setSelectedServices] = useState<Set<string>>(
     new Set(),
   );
   const [finalizando, setFinalizando] = useState(false);
@@ -323,6 +323,7 @@ const BarbeiroContent = () => {
                     src={barber.photo}
                     alt={barber?.name}
                     className="w-11 h-11 rounded-full object-cover"
+                    style={{ objectPosition: barber.photoPosition }}
                   />
                 ) : (
                   <div className="w-11 h-11 rounded-full bg-black flex items-center justify-center">
@@ -420,6 +421,7 @@ const BarbeiroContent = () => {
                               src={service.photo}
                               alt={service.name}
                               className="w-full h-full object-cover"
+                              style={{ objectPosition: service.photoPosition }}
                             />
                           ) : (
                             <span className="text-3xl">✂</span>

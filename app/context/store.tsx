@@ -1,14 +1,21 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 export type Service = {
-  id: number;
+  id: string;
   name: string;
   description: string;
   duration: number;
   price: number;
   photo?: string;
+  photoPosition?: string;
 };
 
 export type Barber = {
@@ -16,8 +23,9 @@ export type Barber = {
   name: string;
   initials: string;
   description: string;
-  serviceIds: number[];
+  serviceIds: string[];
   photo?: string;
+  photoPosition?: string;
 };
 
 type BarbeiroApi = {
@@ -25,6 +33,17 @@ type BarbeiroApi = {
   nome: string;
   descricao: string | null;
   foto: string | null;
+  fotoPosicao: string | null;
+};
+
+type ServicoApi = {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  preco: number;
+  duracao: number;
+  foto: string | null;
+  fotoPosicao: string | null;
 };
 
 function getInitials(name: string) {
@@ -57,14 +76,44 @@ type StoreCtx = {
 const StoreContext = createContext<StoreCtx | null>(null);
 
 export const DEFAULT_SERVICES: Service[] = [
-  { id: 1, name: "Corte de Cabelo", description: "Corte masculino com máquina e tesoura", duration: 30, price: 50 },
-  { id: 2, name: "Barba", description: "Aparar e modelar a barba", duration: 20, price: 35 },
-  { id: 3, name: "Corte + Barba", description: "Combo completo corte e barba", duration: 45, price: 80 },
-  { id: 4, name: "Pezinho", description: "Acabamento no contorno", duration: 15, price: 25 },
+  {
+    id: "default-corte",
+    name: "Corte de Cabelo",
+    description: "Corte masculino com máquina e tesoura",
+    duration: 30,
+    price: 50,
+  },
+  {
+    id: "default-barba",
+    name: "Barba",
+    description: "Aparar e modelar a barba",
+    duration: 20,
+    price: 35,
+  },
+  {
+    id: "default-combo",
+    name: "Corte + Barba",
+    description: "Combo completo corte e barba",
+    duration: 45,
+    price: 80,
+  },
+  {
+    id: "default-pezinho",
+    name: "Pezinho",
+    description: "Acabamento no contorno",
+    duration: 15,
+    price: 25,
+  },
 ];
 
 export const DEFAULT_BARBERS: Barber[] = [
-  { id: "default-yvison", name: "Yvison", initials: "YV", description: "Especialista em cortes modernos e barba", serviceIds: [1, 2, 3, 4] },
+  {
+    id: "default-Barber",
+    name: "Barber",
+    initials: "BR",
+    description: "Especialista em cortes modernos e barba",
+    serviceIds: DEFAULT_SERVICES.map((s) => s.id),
+  },
 ];
 
 function loadUser(): User | null {
@@ -83,6 +132,26 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [user, setUserState] = useState<User | null>(loadUser);
 
   useEffect(() => {
+    fetch("/api/servicos")
+      .then((r) => r.json())
+      .then((data: ServicoApi[]) => {
+        if (!Array.isArray(data) || data.length === 0) return;
+        setServices(
+          data.map((s) => ({
+            id: s.id,
+            name: s.nome,
+            description: s.descricao ?? "",
+            duration: s.duracao,
+            price: s.preco,
+            photo: s.foto ?? undefined,
+            photoPosition: s.fotoPosicao ?? undefined,
+          })),
+        );
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     fetch("/api/barbeiros")
       .then((r) => r.json())
       .then((data: BarbeiroApi[]) => {
@@ -96,6 +165,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               initials: getInitials(b.nome),
               description: b.descricao ?? "",
               photo: b.foto ?? undefined,
+              photoPosition: b.fotoPosicao ?? undefined,
               serviceIds: existing?.serviceIds ?? services.map((s) => s.id),
             };
           }),
@@ -115,7 +185,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <StoreContext.Provider value={{ services, setServices, barbers, setBarbers, user, setUser }}>
+    <StoreContext.Provider
+      value={{ services, setServices, barbers, setBarbers, user, setUser }}
+    >
       {children}
     </StoreContext.Provider>
   );

@@ -39,7 +39,12 @@ export default function EntrarPage() {
           setErro(data.error ?? "Não foi possível entrar");
           return;
         }
-        setUser({ id: data.id, name: data.nome, phone: data.telefone, email: data.email });
+        setUser({
+          id: data.id,
+          name: data.nome,
+          phone: data.telefone,
+          email: data.email,
+        });
 
         const raw = localStorage.getItem("pendingBooking");
         if (raw) {
@@ -68,9 +73,7 @@ export default function EntrarPage() {
       <div className="bg-white flex flex-col">
         <div className="pt-8 pb-2 flex justify-center gap-3">
           <div>
-            <h1 className="text-3xl text-center mb-6 font-bold">
-              Yvison Barber
-            </h1>
+            <h1 className="text-3xl text-center mb-6 font-bold">Barber</h1>
             <h1 className="text-xl text-center mb-2 font-bold">
               Bem-vindo de volta!
             </h1>

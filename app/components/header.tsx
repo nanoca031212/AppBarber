@@ -80,7 +80,7 @@ const Header = () => {
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetContent side="right">
           <SheetHeader>
-            <SheetTitle>YvisonBarber</SheetTitle>
+            <SheetTitle>Barber</SheetTitle>
           </SheetHeader>
           <div className="flex flex-col   gap-1 px-4 pt-2">
             <div className="flex  items-center gap-4 py-6">

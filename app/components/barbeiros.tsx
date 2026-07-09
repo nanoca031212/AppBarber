@@ -28,32 +28,30 @@ const Barbeiros = () => {
           {services.map((s) => (
             <div
               key={s.id}
-              className="w-40 h-44 rounded-xl bg-[#FAFAFA] border-2 border-[#F1f1f1] shrink-0 snap-start flex flex-col justify-between p-3"
+              className="w-40 h-44 rounded-xl bg-[#afafaf] relative overflow-hidden flex flex-col justify-end shrink-0 snap-start"
             >
-              <div className="w-10 h-10 rounded-lg overflow-hidden bg-black flex items-center justify-center shrink-0">
-                {s.photo ? (
-                  <img
-                    src={s.photo}
-                    alt={s.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="text-white text-lg font-bold">✂</span>
-                )}
-              </div>
-              <div>
-                <p className="font-bold text-sm leading-tight">{s.name}</p>
-                {s.description && (
-                  <p className="text-xs text-[#656565] leading-snug mt-0.5 line-clamp-2">
-                    {s.description}
-                  </p>
-                )}
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-[#656565] flex items-center gap-1">
+              {s.photo ? (
+                <img
+                  src={s.photo}
+                  alt={s.name}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={{ objectPosition: s.photoPosition }}
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-zinc-300">
+                  <span className="text-3xl font-bold text-white">✂</span>
+                </div>
+              )}
+              <div className="relative bg-gradient-to-t from-black/70 to-transparent px-3 py-2">
+                <p className="text-white font-bold text-sm truncate">
+                  {s.name}
+                </p>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-white/70 text-xs flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {formatDuration(s.duration)}
                   </span>
-                  <span className="text-sm font-bold">
+                  <span className="text-white text-sm font-bold">
                     R$ {s.price.toFixed(2).replace(".", ",")}
                   </span>
                 </div>
@@ -82,6 +80,7 @@ const Barbeiros = () => {
                     src={b.photo}
                     alt={b.name}
                     className="absolute inset-0 w-full h-full object-cover"
+                    style={{ objectPosition: b.photoPosition }}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center bg-zinc-300">

@@ -115,9 +115,7 @@ function CadastroForm() {
       <div className=" bg-white flex flex-col">
         <div className=" pt-8 pb-2 flex justify-center gap-3">
           <div>
-            <h1 className="text-3xl text-center mb-6 font-bold">
-              Yvison Barber
-            </h1>
+            <h1 className="text-3xl text-center mb-6 font-bold">Barber</h1>
             <h1 className="text-xl text-center mb-2 font-bold">
               Seja Bem-vindo!
             </h1>

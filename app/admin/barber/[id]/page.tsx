@@ -18,8 +18,11 @@ import {
   Plus,
   Check,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
+import { uploadPhoto } from "@/lib/upload-photo";
+import { FocalPointPicker } from "@/app/components/focal-point-picker";
 
 type BarberTab = "dashboard" | "agenda" | "perfil";
 
@@ -152,10 +155,12 @@ function StatusPill({ status }: { status: AppointmentStatus }) {
 function Avatar({
   initials,
   src,
+  position,
   size = "md",
 }: {
   initials: string;
   src?: string;
+  position?: string;
   size?: "sm" | "md" | "lg" | "xl";
 }) {
   const sizes = {
@@ -167,7 +172,12 @@ function Avatar({
   if (src) {
     return (
       <div className={`${sizes[size]} rounded-full overflow-hidden shrink-0`}>
-        <img src={src} alt={initials} className="w-full h-full object-cover" />
+        <img
+          src={src}
+          alt={initials}
+          className="w-full h-full object-cover"
+          style={{ objectPosition: position }}
+        />
       </div>
     );
   }
@@ -242,7 +252,12 @@ function Dashboard({ barberId }: { barberId: string }) {
             Olá, {barber.name.split(" ")[0]}
           </h1>
         </div>
-        <Avatar initials={barber.initials} src={barber.photo} size="lg" />
+        <Avatar
+          initials={barber.initials}
+          src={barber.photo}
+          position={barber.photoPosition}
+          size="lg"
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -489,9 +504,11 @@ function Perfil({ barberId }: { barberId: string }) {
     name: barber?.name ?? "",
     description: barber?.description ?? "",
     photo: barber?.photo ?? "",
+    photoPosition: barber?.photoPosition ?? "50% 50%",
   });
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   if (!barber) {
     return (
@@ -516,6 +533,7 @@ function Perfil({ barberId }: { barberId: string }) {
           nome: form.name.trim(),
           descricao: form.description.trim(),
           foto: form.photo,
+          fotoPosicao: form.photo ? form.photoPosition : null,
         }),
       });
       setBarbers((prev) =>
@@ -527,6 +545,7 @@ function Perfil({ barberId }: { barberId: string }) {
                 initials: getInitials(form.name),
                 description: form.description.trim(),
                 photo: form.photo || undefined,
+                photoPosition: form.photo ? form.photoPosition : undefined,
               }
             : b,
         ),
@@ -550,12 +569,18 @@ function Perfil({ barberId }: { barberId: string }) {
                 src={form.photo}
                 alt="foto"
                 className="w-full h-full object-cover"
+                style={{ objectPosition: form.photoPosition }}
               />
             ) : (
               <Avatar
                 initials={getInitials(form.name || barber.initials)}
                 size="xl"
               />
+            )}
+            {uploading && (
+              <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-full">
+                <Loader2 className="w-5 h-5 animate-spin text-black" />
+              </div>
             )}
           </div>
           <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-black border-2 border-white flex items-center justify-center">
@@ -565,17 +590,34 @@ function Perfil({ barberId }: { barberId: string }) {
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => {
+            onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
-              const reader = new FileReader();
-              reader.onload = (ev) =>
-                setForm((p) => ({ ...p, photo: ev.target?.result as string }));
-              reader.readAsDataURL(file);
+              setUploading(true);
+              try {
+                const url = await uploadPhoto(file);
+                setForm((p) => ({
+                  ...p,
+                  photo: url,
+                  photoPosition: "50% 50%",
+                }));
+              } catch {
+              } finally {
+                setUploading(false);
+              }
             }}
           />
         </label>
         <p className="text-xs text-[#656565]">Toque para alterar a foto</p>
+        {form.photo && (
+          <div className="w-full">
+            <FocalPointPicker
+              src={form.photo}
+              value={form.photoPosition}
+              onChange={(v) => setForm((p) => ({ ...p, photoPosition: v }))}
+            />
+          </div>
+        )}
       </div>
 
       {/* Campos */}
@@ -659,7 +701,7 @@ function Perfil({ barberId }: { barberId: string }) {
       <button
         type="button"
         onClick={handleSave}
-        disabled={!form.name.trim() || saving}
+        disabled={!form.name.trim() || saving || uploading}
         className={[
           "w-full rounded-full py-4 text-sm font-semibold transition-colors",
           saved

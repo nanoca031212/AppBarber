@@ -34,6 +34,7 @@ type BarbeiroApi = {
   descricao: string | null;
   foto: string | null;
   fotoPosicao: string | null;
+  serviceIds: string[];
 };
 
 type ServicoApi = {
@@ -129,7 +130,11 @@ function loadUser(): User | null {
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [services, setServices] = useState<Service[]>(DEFAULT_SERVICES);
   const [barbers, setBarbers] = useState<Barber[]>(DEFAULT_BARBERS);
-  const [user, setUserState] = useState<User | null>(loadUser);
+  const [user, setUserState] = useState<User | null>(null);
+
+  useEffect(() => {
+    setUserState(loadUser());
+  }, []);
 
   useEffect(() => {
     fetch("/api/servicos")
@@ -156,23 +161,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       .then((r) => r.json())
       .then((data: BarbeiroApi[]) => {
         if (!Array.isArray(data) || data.length === 0) return;
-        setBarbers((prev) =>
-          data.map((b) => {
-            const existing = prev.find((p) => p.id === b.id);
-            return {
-              id: b.id,
-              name: b.nome,
-              initials: getInitials(b.nome),
-              description: b.descricao ?? "",
-              photo: b.foto ?? undefined,
-              photoPosition: b.fotoPosicao ?? undefined,
-              serviceIds: existing?.serviceIds ?? services.map((s) => s.id),
-            };
-          }),
+        setBarbers(
+          data.map((b) => ({
+            id: b.id,
+            name: b.nome,
+            initials: getInitials(b.nome),
+            description: b.descricao ?? "",
+            photo: b.foto ?? undefined,
+            photoPosition: b.fotoPosicao ?? undefined,
+            serviceIds: b.serviceIds,
+          })),
         );
       })
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const setUser = useCallback((u: User | null) => {

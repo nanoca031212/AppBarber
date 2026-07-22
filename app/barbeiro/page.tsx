@@ -6,7 +6,11 @@ import { ArrowLeftIcon } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useStore } from "@/app/context/store";
-import { generateTimeSlots, type HorarioConfig } from "@/lib/horarios";
+import {
+  generateTimeSlots,
+  type HorarioConfig,
+  type HorarioOcupado,
+} from "@/lib/horarios";
 
 const defaultHorarioConfig: HorarioConfig = {
   horaInicio: "08:00",
@@ -20,7 +24,16 @@ const defaultHorarioConfig: HorarioConfig = {
 
 type ActiveTab = "servicos" | "horario" | "barbeiro" | "reserva";
 
-type BookingService = { name: string; price: number };
+type BookingService = { name: string; price: number; duration: number };
+
+type DiaPersonalizado = {
+  diaSemana: number;
+  horaInicio: string;
+  horaFim: string;
+  pausaAtiva: boolean;
+  pausaInicio: string | null;
+  pausaFim: string | null;
+};
 
 function isSameDay(a: Date, b: Date) {
   return (
@@ -213,7 +226,7 @@ const BarbeiroContent = () => {
     : services;
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("servicos");
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [selectedSlotRaw, setSelectedSlot] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(() =>
     startOfDay(new Date()),
   );
@@ -223,6 +236,10 @@ const BarbeiroContent = () => {
   const [finalizando, setFinalizando] = useState(false);
   const [horarioConfig, setHorarioConfig] =
     useState<HorarioConfig>(defaultHorarioConfig);
+  const [ocupados, setOcupados] = useState<HorarioOcupado[]>([]);
+  const [diasPersonalizados, setDiasPersonalizados] = useState<
+    Record<number, DiaPersonalizado>
+  >({});
 
   useEffect(() => {
     fetch("/api/configuracao-horario")
@@ -231,10 +248,75 @@ const BarbeiroContent = () => {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    fetch("/api/configuracao-horario/dias")
+      .then((r) => r.json())
+      .then((data: DiaPersonalizado[]) => {
+        const map: Record<number, DiaPersonalizado> = {};
+        data.forEach((d) => {
+          map[d.diaSemana] = d;
+        });
+        setDiasPersonalizados(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  const effectiveHorarioConfig = useMemo(() => {
+    const override = diasPersonalizados[selectedDate.getDay()];
+    if (!override) return horarioConfig;
+    return {
+      ...horarioConfig,
+      horaInicio: override.horaInicio,
+      horaFim: override.horaFim,
+      pausaAtiva: override.pausaAtiva,
+      pausaInicio: override.pausaInicio,
+      pausaFim: override.pausaFim,
+    };
+  }, [horarioConfig, diasPersonalizados, selectedDate]);
+
+  useEffect(() => {
+    if (!barber?.name) return;
+    let cancelled = false;
+    const year = selectedDate.getFullYear();
+    const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+    const day = String(selectedDate.getDate()).padStart(2, "0");
+    fetch(
+      `/api/reservas/disponibilidade?barberName=${encodeURIComponent(barber.name)}&data=${year}-${month}-${day}`,
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setOcupados(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setOcupados([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [barber?.name, selectedDate]);
+
+  const selectedDuration = useMemo(() => {
+    return barberServices
+      .filter((s) => selectedServices.has(s.id))
+      .reduce((acc, s) => acc + s.duration, 0);
+  }, [selectedServices, barberServices]);
+
   const timeSlots = useMemo(
-    () => generateTimeSlots(horarioConfig, selectedDate.getDay()),
-    [horarioConfig, selectedDate],
+    () =>
+      generateTimeSlots(effectiveHorarioConfig, selectedDate.getDay(), {
+        duracao: selectedDuration,
+        ocupados,
+      }),
+    [effectiveHorarioConfig, selectedDate, selectedDuration, ocupados],
   );
+
+  // Se o horário escolhido deixou de caber (mudou o dia, os serviços
+  // selecionados ou outro cliente ocupou o horário), descarta a seleção
+  // em vez de deixar um horário inválido "selecionado".
+  const selectedSlot =
+    selectedSlotRaw && timeSlots.includes(selectedSlotRaw)
+      ? selectedSlotRaw
+      : null;
 
   const total = useMemo(() => {
     return barberServices
@@ -246,7 +328,7 @@ const BarbeiroContent = () => {
     setFinalizando(true);
     const selectedList: BookingService[] = barberServices
       .filter((s) => selectedServices.has(s.id))
-      .map((s) => ({ name: s.name, price: s.price }));
+      .map((s) => ({ name: s.name, price: s.price, duration: s.duration }));
 
     const date = selectedDate.toLocaleDateString("pt-BR", {
       weekday: "long",

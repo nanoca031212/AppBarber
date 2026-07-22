@@ -16,7 +16,7 @@ const Barbeiros = () => {
   const { barbers, services } = useStore();
 
   return (
-    <div className="py-6 space-y-6">
+    <div className="py-6 pb-20 md:pb-0 space-y-6">
       <div>
         <div className="pb-3">
           <h1 className="font-semibold uppercase text-sm">Serviços</h1>
@@ -26,37 +26,40 @@ const Barbeiros = () => {
             <p className="text-sm text-[#999]">Nenhum serviço cadastrado.</p>
           )}
           {services.map((s) => (
-            <div
+            <Link
               key={s.id}
-              className="w-40 h-44 rounded-xl bg-[#afafaf] relative overflow-hidden flex flex-col justify-end shrink-0 snap-start"
+              href={`/barbeiro?id=${s.id}`}
+              className="shrink-0 snap-start"
             >
-              {s.photo ? (
-                <img
-                  src={s.photo}
-                  alt={s.name}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  style={{ objectPosition: s.photoPosition }}
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center bg-zinc-300">
-                  <span className="text-3xl font-bold text-white">✂</span>
-                </div>
-              )}
-              <div className="relative bg-gradient-to-t from-black/70 to-transparent px-3 py-2">
-                <p className="text-white font-bold text-sm truncate">
-                  {s.name}
-                </p>
-                <div className="flex items-center justify-between mt-1">
-                  <span className="text-white/70 text-xs flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {formatDuration(s.duration)}
-                  </span>
-                  <span className="text-white text-sm font-bold">
-                    R$ {s.price.toFixed(2).replace(".", ",")}
-                  </span>
+              <div className="w-40 h-44 rounded-xl bg-[#afafaf] relative overflow-hidden flex flex-col justify-end">
+                {s.photo ? (
+                  <img
+                    src={s.photo}
+                    alt={s.name}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    style={{ objectPosition: s.photoPosition }}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-zinc-300">
+                    <span className="text-3xl font-bold text-white">✂</span>
+                  </div>
+                )}
+                <div className="relative bg-gradient-to-t from-black/70 to-transparent px-3 py-2">
+                  <p className="text-white font-bold text-sm truncate">
+                    {s.name}
+                  </p>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-white/70 text-xs flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {formatDuration(s.duration)}
+                    </span>
+                    <span className="text-white text-sm font-bold">
+                      R$ {s.price.toFixed(2).replace(".", ",")}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </CarouselRow>
       </div>

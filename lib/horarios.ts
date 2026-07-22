@@ -25,9 +25,18 @@ export function isDiaFuncionamento(config: HorarioConfig, diaSemana: number) {
   return config.diasFuncionamento.includes(diaSemana);
 }
 
+export type HorarioOcupado = {
+  horario: string;
+  duracao: number;
+};
+
 export function generateTimeSlots(
   config: HorarioConfig,
   diaSemana?: number,
+  options?: {
+    duracao?: number;
+    ocupados?: HorarioOcupado[];
+  },
 ): string[] {
   if (diaSemana !== undefined && !isDiaFuncionamento(config, diaSemana)) {
     return [];
@@ -41,11 +50,33 @@ export function generateTimeSlots(
   const pausaFim =
     config.pausaAtiva && config.pausaFim ? toMinutes(config.pausaFim) : null;
 
+  // Duração do serviço selecionado — usada para não deixar um horário
+  // "encostado" em outro (o agendamento inteiro precisa caber no intervalo).
+  const duracao =
+    options?.duracao && options.duracao > 0 ? options.duracao : step;
+
+  const ocupados = (options?.ocupados ?? []).map((o) => {
+    const inicio = toMinutes(o.horario);
+    return { inicio, fim: inicio + (o.duracao > 0 ? o.duracao : step) };
+  });
+
   const slots: string[] = [];
   for (let t = start; t < end; t += step) {
-    if (pausaInicio !== null && pausaFim !== null && t >= pausaInicio && t < pausaFim) {
+    const fim = t + duracao;
+
+    // não cabe até o horário de fechamento
+    if (fim > end) continue;
+
+    // conflita com a pausa (ex: horário de almoço)
+    if (pausaInicio !== null && pausaFim !== null && t < pausaFim && fim > pausaInicio) {
       continue;
     }
+
+    // conflita com outro agendamento já existente — pula para o próximo
+    // horário "redondo" em vez de deixar os agendamentos colados
+    const conflita = ocupados.some((o) => t < o.fim && fim > o.inicio);
+    if (conflita) continue;
+
     slots.push(toHHMM(t));
   }
   return slots;

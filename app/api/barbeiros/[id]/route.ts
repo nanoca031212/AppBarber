@@ -6,7 +6,7 @@ export async function PATCH(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
-  const { nome, descricao, foto, fotoPosicao } = await req.json();
+  const { nome, descricao, foto, fotoPosicao, serviceIds } = await req.json();
 
   const barbeiro = await prisma.barbeiro.update({
     where: { id },
@@ -15,10 +15,24 @@ export async function PATCH(
       descricao: descricao || null,
       foto: foto || null,
       fotoPosicao: fotoPosicao || null,
+      ...(serviceIds
+        ? {
+            servicos: {
+              deleteMany: {},
+              create: (serviceIds as string[]).map((servicoId) => ({
+                servicoId,
+              })),
+            },
+          }
+        : {}),
     },
+    include: { servicos: { select: { servicoId: true } } },
   });
 
-  return NextResponse.json(barbeiro);
+  return NextResponse.json({
+    ...barbeiro,
+    serviceIds: barbeiro.servicos.map((s) => s.servicoId),
+  });
 }
 
 export async function DELETE(

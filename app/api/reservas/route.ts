@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-type ServiceItem = { name: string; price: number };
+type ServiceItem = { name: string; price: number; duration?: number };
 
 export async function POST(req: NextRequest) {
   const { clienteId, barberName, services, dateIso, time, total } =
     await req.json();
 
-  const barbeiro = await prisma.barbeiro.upsert({
-    where: { id: `name:${barberName}` },
-    update: {},
-    create: { id: `name:${barberName}`, nome: barberName },
-  });
+  const barbeiro =
+    (await prisma.barbeiro.findFirst({ where: { nome: barberName } })) ??
+    (await prisma.barbeiro.create({ data: { nome: barberName } }));
 
   const reserva = await prisma.reserva.create({
     data: {
@@ -24,16 +22,12 @@ export async function POST(req: NextRequest) {
       servicos: {
         create: await Promise.all(
           services.map(async (s: ServiceItem) => {
-            const servico = await prisma.servico.upsert({
-              where: { id: `name:${s.name}` },
-              update: {},
-              create: {
-                id: `name:${s.name}`,
-                nome: s.name,
-                preco: s.price,
-                duracao: 30,
-              },
-            });
+            const duracao = s.duration && s.duration > 0 ? s.duration : 30;
+            const servico =
+              (await prisma.servico.findFirst({ where: { nome: s.name } })) ??
+              (await prisma.servico.create({
+                data: { nome: s.name, preco: s.price, duracao },
+              }));
             return { servicoId: servico.id };
           }),
         ),

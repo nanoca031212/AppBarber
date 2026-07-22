@@ -18,27 +18,38 @@ model Cliente {
 }
 
 model Barbeiro {
-  id           String    @id @default(cuid())
+  id           String            @id @default(cuid())
   nome         String
   descricao    String?
   foto         String?
   fotoPosicao  String?
-  ativo        Boolean   @default(true)
-  createdAt    DateTime  @default(now())
+  ativo        Boolean           @default(true)
+  createdAt    DateTime          @default(now())
   reservas     Reserva[]
+  servicos     BarbeiroServico[]
 }
 
 model Servico {
-  id           String           @id @default(cuid())
+  id           String            @id @default(cuid())
   nome         String
   descricao    String?
   preco        Float
   duracao      Int
   foto         String?
   fotoPosicao  String?
-  ativo        Boolean          @default(true)
-  createdAt    DateTime         @default(now())
+  ativo        Boolean           @default(true)
+  createdAt    DateTime          @default(now())
   reservas     ReservaServico[]
+  barbeiros    BarbeiroServico[]
+}
+
+model BarbeiroServico {
+  barbeiroId String
+  servicoId  String
+  barbeiro   Barbeiro @relation(fields: [barbeiroId], references: [id], onDelete: Cascade)
+  servico    Servico  @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+
+  @@id([barbeiroId, servicoId])
 }
 
 model Reserva {
@@ -80,6 +91,16 @@ model HorarioFuncionamento {
   pausaInicio       String?
   pausaFim          String?
   diasFuncionamento Int[]    @default([1, 2, 3, 4, 5, 6])
+  updatedAt   DateTime @updatedAt
+}
+
+model HorarioDiaPersonalizado {
+  diaSemana   Int      @id
+  horaInicio  String
+  horaFim     String
+  pausaAtiva  Boolean  @default(false)
+  pausaInicio String?
+  pausaFim    String?
   updatedAt   DateTime @updatedAt
 }
 

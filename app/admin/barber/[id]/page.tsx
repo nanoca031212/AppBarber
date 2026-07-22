@@ -244,7 +244,7 @@ function Dashboard({ barberId }: { barberId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-5 ">
+    <div className="flex flex-col gap-5 lg:max-w-4xl xl:max-w-7xl lg:mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-[#656565] text-sm">Terça-feira, 24 de junho</p>
@@ -260,7 +260,7 @@ function Dashboard({ barberId }: { barberId: string }) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[#656565] uppercase">
@@ -305,77 +305,81 @@ function Dashboard({ barberId }: { barberId: string }) {
         </div>
       </div>
 
-      <div>
-        <div className="flex items-center justify-between pb-3">
-          <h2 className="font-bold">Próximos agendamentos</h2>
-        </div>
-        <div className="flex flex-col gap-3">
-          {mockAppointments
-            .filter((a) => a.status === "confirmado" || a.status === "pendente")
-            .slice(0, 4)
-            .map((apt) => (
-              <div
-                key={apt.id}
-                className="flex items-center gap-3 rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-3"
-              >
-                <Avatar initials={apt.initials} />
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold truncate">{apt.client}</p>
-                  <p className="text-xs text-[#656565]">{apt.service}</p>
-                </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
-                  <div className="flex items-center gap-1 text-xs font-semibold text-[#656565]">
-                    <Clock className="w-3 h-3" />
-                    {apt.time}
-                  </div>
-                  <StatusPill status={apt.status} />
-                </div>
-              </div>
-            ))}
-        </div>
-      </div>
-
-      {barberServices.length > 0 && (
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6">
         <div>
-          <h2 className="font-bold pb-3">Meus serviços</h2>
-          <div className="flex flex-col gap-2">
-            {popularServices.length > 0
-              ? popularServices.map((s) => (
-                  <div key={s.name} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#FAFAFA] border-2 border-[#F1f1f1] flex items-center justify-center shrink-0">
-                      <Scissors className="w-3.5 h-3.5 text-[#656565]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between mb-1">
-                        <p className="text-sm font-semibold">{s.name}</p>
-                        <p className="text-xs text-[#656565]">{s.count}x</p>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-[#F1f1f1]">
-                        <div
-                          className="h-1.5 rounded-full bg-black"
-                          style={{ width: `${s.percent}%` }}
-                        />
-                      </div>
-                    </div>
+          <div className="flex items-center justify-between pb-3">
+            <h2 className="font-bold">Próximos agendamentos</h2>
+          </div>
+          <div className="flex flex-col gap-3">
+            {mockAppointments
+              .filter(
+                (a) => a.status === "confirmado" || a.status === "pendente",
+              )
+              .slice(0, 4)
+              .map((apt) => (
+                <div
+                  key={apt.id}
+                  className="flex items-center gap-3 rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-3"
+                >
+                  <Avatar initials={apt.initials} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold truncate">{apt.client}</p>
+                    <p className="text-xs text-[#656565]">{apt.service}</p>
                   </div>
-                ))
-              : barberServices.map((s) => (
-                  <div key={s.id} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#FAFAFA] border-2 border-[#F1f1f1] flex items-center justify-center shrink-0">
-                      <Scissors className="w-3.5 h-3.5 text-[#656565]" />
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <div className="flex items-center gap-1 text-xs font-semibold text-[#656565]">
+                      <Clock className="w-3 h-3" />
+                      {apt.time}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold">{s.name}</p>
-                      <p className="text-xs text-[#656565]">
-                        {s.duration} min · R${" "}
-                        {s.price.toFixed(2).replace(".", ",")}
-                      </p>
-                    </div>
+                    <StatusPill status={apt.status} />
                   </div>
-                ))}
+                </div>
+              ))}
           </div>
         </div>
-      )}
+
+        {barberServices.length > 0 && (
+          <div className="mt-5 lg:mt-0">
+            <h2 className="font-bold pb-3">Meus serviços</h2>
+            <div className="flex flex-col gap-2">
+              {popularServices.length > 0
+                ? popularServices.map((s) => (
+                    <div key={s.name} className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#FAFAFA] border-2 border-[#F1f1f1] flex items-center justify-center shrink-0">
+                        <Scissors className="w-3.5 h-3.5 text-[#656565]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between mb-1">
+                          <p className="text-sm font-semibold">{s.name}</p>
+                          <p className="text-xs text-[#656565]">{s.count}x</p>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-[#F1f1f1]">
+                          <div
+                            className="h-1.5 rounded-full bg-black"
+                            style={{ width: `${s.percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                : barberServices.map((s) => (
+                    <div key={s.id} className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#FAFAFA] border-2 border-[#F1f1f1] flex items-center justify-center shrink-0">
+                        <Scissors className="w-3.5 h-3.5 text-[#656565]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold">{s.name}</p>
+                        <p className="text-xs text-[#656565]">
+                          {s.duration} min · R${" "}
+                          {s.price.toFixed(2).replace(".", ",")}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -402,7 +406,7 @@ function Agenda() {
   ];
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 lg:max-w-4xl xl:max-w-7xl lg:mx-auto">
       <h1 className="text-2xl font-bold">Minha Agenda</h1>
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -447,16 +451,16 @@ function Agenda() {
         ))}
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-4 lg:gap-4">
         {filtered.length === 0 && (
-          <p className="text-center text-[#656565] py-8">
+          <p className="text-center text-[#656565] py-8 lg:col-span-4">
             Nenhum agendamento encontrado.
           </p>
         )}
         {filtered.map((apt) => (
           <div
             key={apt.id}
-            className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3"
+            className="w-full h-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1 text-sm font-semibold text-[#656565]">
@@ -474,7 +478,7 @@ function Agenda() {
               <p className="font-bold shrink-0">{apt.price}</p>
             </div>
             {(apt.status === "confirmado" || apt.status === "pendente") && (
-              <div className="flex gap-2 pt-1 border-t border-[#F1f1f1]">
+              <div className="flex gap-2 pt-3 border-t border-[#F1f1f1] mt-auto">
                 <button
                   type="button"
                   className="flex-1 rounded-full border-2 border-[#F1f1f1] bg-white py-2 text-sm font-semibold text-red-500"
@@ -557,7 +561,7 @@ function Perfil({ barberId }: { barberId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 lg:max-w-4xl lg:mx-auto">
       <h1 className="text-2xl font-bold">Meu Perfil</h1>
 
       {/* Foto */}
@@ -610,7 +614,7 @@ function Perfil({ barberId }: { barberId: string }) {
         </label>
         <p className="text-xs text-[#656565]">Toque para alterar a foto</p>
         {form.photo && (
-          <div className="w-full">
+          <div className="w-full lg:max-w-sm">
             <FocalPointPicker
               src={form.photo}
               value={form.photoPosition}
@@ -620,33 +624,61 @@ function Perfil({ barberId }: { barberId: string }) {
         )}
       </div>
 
-      {/* Campos */}
-      <div className="flex flex-col gap-4">
-        <div>
-          <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
-            Nome
-          </label>
-          <input
-            type="text"
-            value={form.name}
-            onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            placeholder="Seu nome"
-            className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
-          />
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:gap-6">
+        {/* Campos */}
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+              Nome
+            </label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              placeholder="Seu nome"
+              className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+              Descrição
+            </label>
+            <textarea
+              value={form.description}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, description: e.target.value }))
+              }
+              placeholder="Fale um pouco sobre você..."
+              rows={3}
+              className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black resize-none"
+            />
+          </div>
         </div>
-        <div>
-          <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
-            Descrição
-          </label>
-          <textarea
-            value={form.description}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, description: e.target.value }))
-            }
-            placeholder="Fale um pouco sobre você..."
-            rows={3}
-            className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black resize-none"
-          />
+
+        <div className="mt-6 lg:mt-0">
+          {/* Estatísticas rápidas */}
+          <p className="text-xs font-semibold text-[#656565] uppercase pb-2">
+            Estatísticas
+          </p>
+          <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
+            {[
+              { label: "Cortes este mês", value: "64" },
+              { label: "Clientes atendidos", value: "142" },
+              { label: "Avaliação média", value: "5,0 ★" },
+              { label: "Taxa de retorno", value: "78%" },
+            ].map((item, i, arr) => (
+              <div
+                key={item.label}
+                className={[
+                  "flex items-center justify-between px-4 py-3.5",
+                  i < arr.length - 1 ? "border-b border-[#F1f1f1]" : "",
+                ].join(" ")}
+              >
+                <p className="text-sm font-semibold">{item.label}</p>
+                <p className="text-sm font-bold">{item.value}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -672,38 +704,12 @@ function Perfil({ barberId }: { barberId: string }) {
         </div>
       )}
 
-      {/* Estatísticas rápidas */}
-      <div>
-        <p className="text-xs font-semibold text-[#656565] uppercase pb-2">
-          Estatísticas
-        </p>
-        <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
-          {[
-            { label: "Cortes este mês", value: "64" },
-            { label: "Clientes atendidos", value: "142" },
-            { label: "Avaliação média", value: "5,0 ★" },
-            { label: "Taxa de retorno", value: "78%" },
-          ].map((item, i, arr) => (
-            <div
-              key={item.label}
-              className={[
-                "flex items-center justify-between px-4 py-3.5",
-                i < arr.length - 1 ? "border-b border-[#F1f1f1]" : "",
-              ].join(" ")}
-            >
-              <p className="text-sm font-semibold">{item.label}</p>
-              <p className="text-sm font-bold">{item.value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
       <button
         type="button"
         onClick={handleSave}
         disabled={!form.name.trim() || saving || uploading}
         className={[
-          "w-full rounded-full py-4 text-sm font-semibold transition-colors",
+          "w-full rounded-full py-4 text-sm font-semibold transition-colors lg:w-auto lg:px-10 lg:self-start",
           saved
             ? "bg-emerald-600 text-white"
             : "bg-black text-white disabled:opacity-40",
@@ -748,12 +754,58 @@ export default function BarberPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { barbers } = useStore();
+  const barber = barbers.find((b) => String(b.id) === id);
   const [activeTab, setActiveTab] = useState<BarberTab>("dashboard");
 
   return (
-    <div className="bg-zinc-50 min-h-screen">
-      {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 bg-white border-b-2 border-[#F1f1f1]">
+    <div className="bg-zinc-50 min-h-screen lg:flex">
+      {/* Sidebar (desktop) */}
+      <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 border-r-2 border-[#F1f1f1] bg-white px-4 py-6">
+        <div className="flex items-center gap-2 px-2 pb-8">
+          <Avatar
+            initials={barber?.initials ?? "B"}
+            src={barber?.photo}
+            position={barber?.photoPosition}
+          />
+          <div className="min-w-0">
+            <p className="font-bold text-sm truncate">
+              {barber?.name ?? "Barbeiro"}
+            </p>
+            <p className="text-xs text-[#656565] truncate">
+              Painel do Barbeiro
+            </p>
+          </div>
+        </div>
+        <nav className="flex flex-col gap-1">
+          {navItems.map(({ tab, label, icon }) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={[
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+                activeTab === tab
+                  ? "bg-black text-white"
+                  : "text-[#656565] hover:bg-[#FAFAFA]",
+              ].join(" ")}
+            >
+              {icon}
+              {label}
+            </button>
+          ))}
+        </nav>
+        <Link
+          href="/admin"
+          className="mt-auto flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#656565] hover:bg-[#FAFAFA]"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Voltar ao admin
+        </Link>
+      </aside>
+
+      {/* Header (mobile) */}
+      <div className="fixed top-0 left-0 right-0 z-40 bg-white border-b-2 border-[#F1f1f1] lg:hidden">
         <div className="max-w-md mx-auto flex items-center gap-3 px-5 py-4">
           <Link
             href="/admin"
@@ -765,13 +817,13 @@ export default function BarberPage({
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-5 pt-24 pb-28">
+      <div className="max-w-md mx-auto px-5 pt-24 pb-28 lg:max-w-none lg:mx-0 lg:ml-64 lg:px-10 lg:pt-10 lg:pb-10">
         {activeTab === "dashboard" && <Dashboard barberId={id} />}
         {activeTab === "agenda" && <Agenda />}
         {activeTab === "perfil" && <Perfil barberId={id} />}
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-[#F1f1f1] z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-[#F1f1f1] z-50 lg:hidden">
         <div className="max-w-md mx-auto flex">
           {navItems.map(({ tab, label, icon }) => (
             <button

@@ -1151,6 +1151,107 @@ function Config() {
     }));
   }
 
+  type DiaPersonalizado = {
+    diaSemana: number;
+    horaInicio: string;
+    horaFim: string;
+    pausaAtiva: boolean;
+    pausaInicio: string | null;
+    pausaFim: string | null;
+  };
+
+  const [diasPersonalizados, setDiasPersonalizados] = useState<
+    Record<number, DiaPersonalizado>
+  >({});
+
+  useEffect(() => {
+    fetch("/api/configuracao-horario/dias")
+      .then((r) => r.json())
+      .then((data: DiaPersonalizado[]) => {
+        const map: Record<number, DiaPersonalizado> = {};
+        data.forEach((d) => {
+          map[d.diaSemana] = d;
+        });
+        setDiasPersonalizados(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  const [personalizarModalOpen, setPersonalizarModalOpen] = useState(false);
+  const [personalizarDia, setPersonalizarDia] = useState<number | null>(null);
+  const [personalizarForm, setPersonalizarForm] = useState({
+    horaInicio: "08:00",
+    horaFim: "19:00",
+    pausaAtiva: false,
+    pausaInicio: "12:00",
+    pausaFim: "13:00",
+  });
+  const [savingPersonalizado, setSavingPersonalizado] = useState(false);
+
+  function openPersonalizar() {
+    setPersonalizarDia(null);
+    setPersonalizarModalOpen(true);
+  }
+
+  function selectPersonalizarDia(dia: number) {
+    setPersonalizarDia(dia);
+    const existing = diasPersonalizados[dia];
+    setPersonalizarForm({
+      horaInicio: existing?.horaInicio ?? horario.horaInicio,
+      horaFim: existing?.horaFim ?? horario.horaFim,
+      pausaAtiva: existing?.pausaAtiva ?? horario.pausaAtiva,
+      pausaInicio: existing?.pausaInicio ?? horario.pausaInicio,
+      pausaFim: existing?.pausaFim ?? horario.pausaFim,
+    });
+  }
+
+  async function savePersonalizado() {
+    if (personalizarDia === null) return;
+    setSavingPersonalizado(true);
+    try {
+      const res = await fetch("/api/configuracao-horario/dias", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          diaSemana: personalizarDia,
+          horaInicio: personalizarForm.horaInicio,
+          horaFim: personalizarForm.horaFim,
+          pausaAtiva: personalizarForm.pausaAtiva,
+          pausaInicio: personalizarForm.pausaAtiva
+            ? personalizarForm.pausaInicio
+            : null,
+          pausaFim: personalizarForm.pausaAtiva
+            ? personalizarForm.pausaFim
+            : null,
+        }),
+      });
+      const saved: DiaPersonalizado = await res.json();
+      setDiasPersonalizados((prev) => ({ ...prev, [personalizarDia]: saved }));
+      setPersonalizarModalOpen(false);
+      setPersonalizarDia(null);
+    } catch {}
+    setSavingPersonalizado(false);
+  }
+
+  async function removePersonalizado() {
+    if (personalizarDia === null) return;
+    setSavingPersonalizado(true);
+    try {
+      await fetch(
+        `/api/configuracao-horario/dias?diaSemana=${personalizarDia}`,
+        { method: "DELETE" },
+      );
+      setDiasPersonalizados((prev) => {
+        const next = { ...prev };
+        delete next[personalizarDia];
+        return next;
+      });
+      setPersonalizarModalOpen(false);
+      setPersonalizarDia(null);
+    } catch {}
+    setSavingPersonalizado(false);
+  }
+
   const [serviceModal, setServiceModal] = useState<{
     open: boolean;
     editing: Service | null;
@@ -1343,6 +1444,11 @@ function Config() {
     if (!barberForm.name.trim()) return;
     setSavingBarber(true);
     try {
+      // Serviços que ainda são placeholders locais (nunca salvos no banco)
+      // não têm um registro real para vincular — não enviamos esses ids.
+      const serviceIds = barberForm.serviceIds.filter(
+        (id) => !id.startsWith("default-"),
+      );
       const editingId = barberModal.editing?.id;
       const isPlaceholder = editingId?.startsWith("default-");
       if (editingId && !isPlaceholder) {
@@ -1354,6 +1460,7 @@ function Config() {
             descricao: barberForm.description.trim(),
             foto: barberForm.photo,
             fotoPosicao: barberForm.photo ? barberForm.photoPosition : null,
+            serviceIds,
           }),
         });
         if (!res.ok) throw new Error("Falha ao salvar barbeiro");
@@ -1385,6 +1492,7 @@ function Config() {
             descricao: barberForm.description.trim(),
             foto: barberForm.photo,
             fotoPosicao: barberForm.photo ? barberForm.photoPosition : null,
+            serviceIds,
           }),
         });
         if (!res.ok) throw new Error("Falha ao criar barbeiro");
@@ -1485,6 +1593,7 @@ function Config() {
             <div className="flex gap-1.5">
               {["D", "S", "T", "Q", "Q", "S", "S"].map((letra, dia) => {
                 const active = horario.diasFuncionamento.includes(dia);
+                const personalizado = Boolean(diasPersonalizados[dia]);
                 return (
                   <button
                     key={dia}
@@ -1492,9 +1601,11 @@ function Config() {
                     onClick={() => toggleDiaFuncionamento(dia)}
                     className={[
                       "w-9 h-9 rounded-full text-xs font-bold shrink-0 border-2 transition-colors",
-                      active
-                        ? "bg-black text-white border-black"
-                        : "bg-white text-[#656565] border-[#F1f1f1]",
+                      !active
+                        ? "bg-white text-[#656565] border-[#F1f1f1]"
+                        : personalizado
+                          ? "bg-yellow-400 text-black border-yellow-400"
+                          : "bg-black text-white border-black",
                     ].join(" ")}
                   >
                     {letra}
@@ -1624,9 +1735,8 @@ function Config() {
             </button>
             <button
               type="button"
-              onClick={saveHorario}
-              disabled={savingHorario}
-              className="w-full rounded-full bg-white text-black/90 border-[#cccccc]/90 border py-3 text-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2"
+              onClick={openPersonalizar}
+              className="w-full rounded-full bg-white text-black/90 border-[#cccccc]/90 border py-3 text-sm font-semibold flex items-center justify-center gap-2"
             >
               Personalizar
             </button>
@@ -2257,6 +2367,163 @@ function Config() {
             className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
           />
         </div>
+      </BottomSheet>
+
+      {/* Modal: Personalizar dia */}
+      <BottomSheet
+        open={personalizarModalOpen}
+        onClose={() => setPersonalizarModalOpen(false)}
+        title="Personalizar dia"
+        footer={
+          personalizarDia !== null ? (
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={savePersonalizado}
+                disabled={savingPersonalizado}
+                className="w-full rounded-full bg-black text-white py-3.5 text-sm font-semibold disabled:opacity-40"
+              >
+                {savingPersonalizado ? "Salvando..." : "Salvar horário do dia"}
+              </button>
+              {diasPersonalizados[personalizarDia] && (
+                <button
+                  type="button"
+                  onClick={removePersonalizado}
+                  disabled={savingPersonalizado}
+                  className="w-full rounded-full bg-white border-2 border-[#F1f1f1] text-red-500 py-3 text-sm font-semibold disabled:opacity-40"
+                >
+                  Restaurar horário padrão
+                </button>
+              )}
+            </div>
+          ) : undefined
+        }
+      >
+        <div>
+          <label className="text-xs font-semibold text-[#656565] uppercase block pb-2">
+            Escolha o dia
+          </label>
+          <div className="flex gap-1.5">
+            {["D", "S", "T", "Q", "Q", "S", "S"].map((letra, dia) => {
+              const isSelected = personalizarDia === dia;
+              const personalizado = Boolean(diasPersonalizados[dia]);
+              return (
+                <button
+                  key={dia}
+                  type="button"
+                  onClick={() => selectPersonalizarDia(dia)}
+                  className={[
+                    "w-9 h-9 rounded-full text-xs font-bold shrink-0 border-2 transition-colors",
+                    isSelected
+                      ? "bg-yellow-400 text-black border-yellow-400"
+                      : personalizado
+                        ? "bg-yellow-100 text-black border-yellow-300"
+                        : "bg-white text-[#656565] border-[#F1f1f1]",
+                  ].join(" ")}
+                >
+                  {letra}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {personalizarDia !== null && (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+                  Abre às
+                </label>
+                <input
+                  type="time"
+                  value={personalizarForm.horaInicio}
+                  onChange={(e) =>
+                    setPersonalizarForm((p) => ({
+                      ...p,
+                      horaInicio: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+                  Fecha às
+                </label>
+                <input
+                  type="time"
+                  value={personalizarForm.horaFim}
+                  onChange={(e) =>
+                    setPersonalizarForm((p) => ({
+                      ...p,
+                      horaFim: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1 border-t border-[#F1f1f1]">
+              <div>
+                <p className="font-semibold text-sm">Pausa no meio do dia</p>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setPersonalizarForm((p) => ({
+                    ...p,
+                    pausaAtiva: !p.pausaAtiva,
+                  }))
+                }
+              >
+                {personalizarForm.pausaAtiva ? (
+                  <ToggleRight className="w-7 h-7 text-black" />
+                ) : (
+                  <ToggleLeft className="w-7 h-7 text-[#656565]" />
+                )}
+              </button>
+            </div>
+
+            {personalizarForm.pausaAtiva && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+                    Pausa de
+                  </label>
+                  <input
+                    type="time"
+                    value={personalizarForm.pausaInicio}
+                    onChange={(e) =>
+                      setPersonalizarForm((p) => ({
+                        ...p,
+                        pausaInicio: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+                    Até
+                  </label>
+                  <input
+                    type="time"
+                    value={personalizarForm.pausaFim}
+                    onChange={(e) =>
+                      setPersonalizarForm((p) => ({
+                        ...p,
+                        pausaFim: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
+                  />
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </BottomSheet>
     </div>
   );

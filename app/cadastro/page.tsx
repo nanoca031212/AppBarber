@@ -112,7 +112,7 @@ function CadastroForm() {
 
   return (
     <div className="flex h-screen flex-col  justify-center">
-      <div className=" bg-white flex flex-col">
+      <div className="w-full max-w-sm mx-auto bg-white flex flex-col">
         <div className=" pt-8 pb-2 flex justify-center gap-3">
           <div>
             <h1 className="text-3xl text-center mb-6 font-bold">Barber</h1>

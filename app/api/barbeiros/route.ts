@@ -5,12 +5,18 @@ export async function GET() {
   const barbeiros = await prisma.barbeiro.findMany({
     where: { ativo: true },
     orderBy: { createdAt: "asc" },
+    include: { servicos: { select: { servicoId: true } } },
   });
-  return NextResponse.json(barbeiros);
+  return NextResponse.json(
+    barbeiros.map((b) => ({
+      ...b,
+      serviceIds: b.servicos.map((s) => s.servicoId),
+    })),
+  );
 }
 
 export async function POST(req: NextRequest) {
-  const { nome, descricao, foto, fotoPosicao } = await req.json();
+  const { nome, descricao, foto, fotoPosicao, serviceIds } = await req.json();
 
   if (!nome) {
     return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 });
@@ -22,8 +28,17 @@ export async function POST(req: NextRequest) {
       descricao: descricao || null,
       foto: foto || null,
       fotoPosicao: fotoPosicao || null,
+      servicos: {
+        create: ((serviceIds ?? []) as string[]).map((servicoId) => ({
+          servicoId,
+        })),
+      },
     },
+    include: { servicos: { select: { servicoId: true } } },
   });
 
-  return NextResponse.json(barbeiro);
+  return NextResponse.json({
+    ...barbeiro,
+    serviceIds: barbeiro.servicos.map((s) => s.servicoId),
+  });
 }

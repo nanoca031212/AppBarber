@@ -8,7 +8,7 @@ import { useStore } from "@/app/context/store";
 
 const beneficios = [
   "3 cortes por semana",
-  "Sem taxa de agendamento",
+  "Pague menos por mês",
   "Prioridade nos horários",
   "Cancele quando quiser",
 ];

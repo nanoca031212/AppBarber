@@ -65,6 +65,20 @@ export type User = {
   photo?: string;
 };
 
+export type Perfil = {
+  capaFoto?: string;
+  capaFotoPosicao?: string;
+  capaFotoDesktop?: string;
+  capaFotoPosicaoDesktop?: string;
+};
+
+type PerfilApi = {
+  capaFoto: string | null;
+  capaFotoPosicao: string | null;
+  capaFotoDesktop: string | null;
+  capaFotoPosicaoDesktop: string | null;
+};
+
 type StoreCtx = {
   services: Service[];
   setServices: React.Dispatch<React.SetStateAction<Service[]>>;
@@ -72,6 +86,8 @@ type StoreCtx = {
   setBarbers: React.Dispatch<React.SetStateAction<Barber[]>>;
   user: User | null;
   setUser: (u: User | null) => void;
+  perfil: Perfil;
+  setPerfil: React.Dispatch<React.SetStateAction<Perfil>>;
 };
 
 const StoreContext = createContext<StoreCtx | null>(null);
@@ -131,6 +147,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [services, setServices] = useState<Service[]>(DEFAULT_SERVICES);
   const [barbers, setBarbers] = useState<Barber[]>(DEFAULT_BARBERS);
   const [user, setUserState] = useState<User | null>(null);
+  const [perfil, setPerfil] = useState<Perfil>({});
 
   useEffect(() => {
     setUserState(loadUser());
@@ -176,6 +193,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    fetch("/api/perfil")
+      .then((r) => r.json())
+      .then((data: PerfilApi) =>
+        setPerfil({
+          capaFoto: data.capaFoto || undefined,
+          capaFotoPosicao: data.capaFotoPosicao || undefined,
+          capaFotoDesktop: data.capaFotoDesktop || undefined,
+          capaFotoPosicaoDesktop: data.capaFotoPosicaoDesktop || undefined,
+        }),
+      )
+      .catch(() => {});
+  }, []);
+
   const setUser = useCallback((u: User | null) => {
     setUserState(u);
     if (u === null) {
@@ -187,7 +218,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <StoreContext.Provider
-      value={{ services, setServices, barbers, setBarbers, user, setUser }}
+      value={{
+        services,
+        setServices,
+        barbers,
+        setBarbers,
+        user,
+        setUser,
+        perfil,
+        setPerfil,
+      }}
     >
       {children}
     </StoreContext.Provider>

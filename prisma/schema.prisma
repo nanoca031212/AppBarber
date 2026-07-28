@@ -112,5 +112,9 @@ model PerfilNegocio {
   barbeiroNome       String
   barbeiroDescricao  String?
   barbeiroFoto       String?
+  capaFoto           String?
+  capaFotoPosicao    String?
+  capaFotoDesktop        String?
+  capaFotoPosicaoDesktop String?
   updatedAt          DateTime @updatedAt
 }

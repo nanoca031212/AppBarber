@@ -14,7 +14,7 @@ const beneficios = [
 ];
 
 const Assinatura = () => {
-  const { user } = useStore();
+  const { user, perfil } = useStore();
   const [loading, setLoading] = useState(false);
 
   async function handleAssinar() {
@@ -37,7 +37,33 @@ const Assinatura = () => {
 
   return (
     <div className="relative min-h-screen bg-white">
-      <div className="bg-[#505050] w-full z-0 h-[220px]"></div>
+      <div className="relative bg-[#505050] w-full z-0 h-[220px] overflow-hidden">
+        {(perfil.capaFoto || perfil.capaFotoDesktop) && (
+          <>
+            {(perfil.capaFoto || perfil.capaFotoDesktop) && (
+              <img
+                src={perfil.capaFoto || perfil.capaFotoDesktop}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover lg:hidden"
+                style={{ objectPosition: perfil.capaFotoPosicao || "50% 50%" }}
+              />
+            )}
+            {(perfil.capaFotoDesktop || perfil.capaFoto) && (
+              <img
+                src={perfil.capaFotoDesktop || perfil.capaFoto}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover hidden lg:block"
+                style={{
+                  objectPosition:
+                    perfil.capaFotoPosicaoDesktop ||
+                    perfil.capaFotoPosicao ||
+                    "50% 50%",
+                }}
+              />
+            )}
+          </>
+        )}
+      </div>
       <Link href="/">
         <Button className="absolute top-4 left-4 rounded-full bg-white h-12 w-12 z-20 text-black">
           <ArrowLeftIcon />

@@ -217,7 +217,7 @@ function TimeSlotList({ slots, selectedSlot, onSelect }: TimeSlotListProps) {
 
 const BarbeiroContent = () => {
   const searchParams = useSearchParams();
-  const { barbers, services, user } = useStore();
+  const { barbers, services, user, perfil } = useStore();
 
   const barberId = searchParams.get("id") ?? barbers[0]?.id;
   const barber = barbers.find((b) => b.id === barberId) ?? barbers[0];
@@ -384,7 +384,33 @@ const BarbeiroContent = () => {
 
   return (
     <div className="relative">
-      <div className="bg-[#505050] w-full z-0 h-[340px] lg:h-[430px]"></div>
+      <div className="relative bg-[#505050] w-full -z-10 h-[340px] lg:h-[430px] overflow-hidden">
+        {(perfil.capaFoto || perfil.capaFotoDesktop) && (
+          <>
+            {(perfil.capaFoto || perfil.capaFotoDesktop) && (
+              <img
+                src={perfil.capaFoto || perfil.capaFotoDesktop}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover lg:hidden"
+                style={{ objectPosition: perfil.capaFotoPosicao || "50% 50%" }}
+              />
+            )}
+            {(perfil.capaFotoDesktop || perfil.capaFoto) && (
+              <img
+                src={perfil.capaFotoDesktop || perfil.capaFoto}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover hidden lg:block"
+                style={{
+                  objectPosition:
+                    perfil.capaFotoPosicaoDesktop ||
+                    perfil.capaFotoPosicao ||
+                    "50% 50%",
+                }}
+              />
+            )}
+          </>
+        )}
+      </div>
       <Link href="/">
         <Button className="absolute top-4 left-4 rounded-full bg-white h-12 w-12 z-20 text-black">
           <ArrowLeftIcon />

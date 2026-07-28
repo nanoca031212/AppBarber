@@ -811,19 +811,22 @@ function Clientes() {
 
   const allClients = useMemo(() => {
     return dbClients.map((c) => {
-      const clientReservas = reservas.filter((r) => r.cliente.id === c.id);
+      const clientReservas = [...reservas]
+        .filter((r) => r.cliente.id === c.id)
+        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
       const concluidas = clientReservas.filter((r) => r.status === "CONCLUIDO");
-      const lastReserva = [...clientReservas].sort(
-        (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime(),
-      )[0];
+      const lastConcluida = concluidas[0];
       return {
         id: c.id,
         name: c.nome,
         initials: getInitials(c.nome),
         phone: c.telefone,
-        lastVisit: lastReserva
-          ? new Date(lastReserva.data).toLocaleDateString("pt-BR")
-          : new Date(c.createdAt).toLocaleDateString("pt-BR"),
+        email: c.email,
+        createdAt: c.createdAt,
+        reservas: clientReservas,
+        lastVisit: lastConcluida
+          ? new Date(lastConcluida.data).toLocaleDateString("pt-BR")
+          : null,
         totalVisits: concluidas.length,
         totalSpent: formatPrice(
           concluidas.reduce((sum, r) => sum + r.total, 0),
@@ -832,6 +835,12 @@ function Clientes() {
       };
     });
   }, [dbClients, reservas]);
+
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(
+    null,
+  );
+  const selectedClient =
+    allClients.find((c) => c.id === selectedClientId) ?? null;
 
   const filtered = useMemo(() => {
     if (!search.trim()) return allClients;
@@ -881,7 +890,8 @@ function Clientes() {
           {filtered.map((client) => (
             <div
               key={client.id}
-              className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3"
+              onClick={() => setSelectedClientId(client.id)}
+              className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3 cursor-pointer hover:border-black/20 transition-colors"
             >
               <div className="flex items-center gap-3">
                 <Avatar initials={client.initials} />
@@ -912,13 +922,99 @@ function Clientes() {
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-[#656565]">Última visita</p>
-                  <p className="font-bold text-sm">{client.lastVisit}</p>
+                  <p className="font-bold text-sm">
+                    {client.lastVisit ?? "Nunca"}
+                  </p>
                 </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <BottomSheet
+        open={Boolean(selectedClient)}
+        onClose={() => setSelectedClientId(null)}
+        title={selectedClient?.name ?? "Cliente"}
+      >
+        {selectedClient && (
+          <>
+            <div className="flex items-center gap-3">
+              <Avatar initials={selectedClient.initials} size="lg" />
+              <div className="min-w-0">
+                <p className="font-bold text-lg truncate">
+                  {selectedClient.name}
+                </p>
+                <div className="flex items-center gap-1 text-sm text-[#656565]">
+                  <Phone className="w-3.5 h-3.5 shrink-0" />
+                  {selectedClient.phone}
+                </div>
+                {selectedClient.email && (
+                  <p className="text-sm text-[#656565] truncate">
+                    {selectedClient.email}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-between rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-3">
+              <div className="text-center flex-1">
+                <p className="text-xs text-[#656565]">Visitas</p>
+                <p className="font-bold text-sm">
+                  {selectedClient.totalVisits}x
+                </p>
+              </div>
+              <div className="text-center flex-1 border-x border-[#F1f1f1]">
+                <p className="text-xs text-[#656565]">Total gasto</p>
+                <p className="font-bold text-sm">
+                  {selectedClient.totalSpent}
+                </p>
+              </div>
+              <div className="text-center flex-1">
+                <p className="text-xs text-[#656565]">Última visita</p>
+                <p className="font-bold text-sm">
+                  {selectedClient.lastVisit ?? "Nunca"}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-[#656565] uppercase pb-2">
+                Histórico de agendamentos
+              </p>
+              {selectedClient.reservas.length === 0 ? (
+                <p className="text-sm text-[#656565] py-4 text-center">
+                  Nenhum agendamento ainda.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {selectedClient.reservas.map((r) => (
+                    <div
+                      key={r.id}
+                      className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-3 flex flex-col gap-1.5"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-semibold text-sm">
+                          {new Date(r.data).toLocaleDateString("pt-BR")}
+                          {r.horario ? ` • ${r.horario}` : ""}
+                        </p>
+                        <StatusPill status={toAppointmentStatus(r.status)} />
+                      </div>
+                      <p className="text-xs text-[#656565]">
+                        {r.barbeiro.nome} •{" "}
+                        {r.servicos.map((s) => s.servico.nome).join(", ")}
+                      </p>
+                      <p className="text-sm font-bold">
+                        {formatPrice(r.total)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </BottomSheet>
     </div>
   );
 }
@@ -994,6 +1090,10 @@ type PerfilData = {
   barbeiroNome: string;
   barbeiroDescricao: string;
   barbeiroFoto: string;
+  capaFoto: string;
+  capaFotoPosicao: string;
+  capaFotoDesktop: string;
+  capaFotoPosicaoDesktop: string;
 };
 
 const DEFAULT_PERFIL: PerfilData = {
@@ -1003,6 +1103,10 @@ const DEFAULT_PERFIL: PerfilData = {
   barbeiroNome: "",
   barbeiroDescricao: "",
   barbeiroFoto: "",
+  capaFoto: "",
+  capaFotoPosicao: "50% 50%",
+  capaFotoDesktop: "",
+  capaFotoPosicaoDesktop: "50% 50%",
 };
 
 function Config() {
@@ -1021,6 +1125,10 @@ function Config() {
           barbeiroNome: data.barbeiroNome ?? DEFAULT_PERFIL.barbeiroNome,
           barbeiroDescricao: data.barbeiroDescricao ?? "",
           barbeiroFoto: data.barbeiroFoto ?? "",
+          capaFoto: data.capaFoto ?? "",
+          capaFotoPosicao: data.capaFotoPosicao ?? "50% 50%",
+          capaFotoDesktop: data.capaFotoDesktop ?? "",
+          capaFotoPosicaoDesktop: data.capaFotoPosicaoDesktop ?? "50% 50%",
         }),
       )
       .catch(() => {});
@@ -1066,6 +1174,44 @@ function Config() {
     });
     setSavingProfile(false);
     setProfileModalOpen(false);
+  }
+
+  const [capaModalOpen, setCapaModalOpen] = useState(false);
+  const [capaTab, setCapaTab] = useState<"mobile" | "desktop">("mobile");
+  const [capaForm, setCapaForm] = useState({
+    foto: "",
+    fotoPosicao: "50% 50%",
+    fotoDesktop: "",
+    fotoPosicaoDesktop: "50% 50%",
+  });
+  const [savingCapa, setSavingCapa] = useState(false);
+  const [uploadingCapaMobile, setUploadingCapaMobile] = useState(false);
+  const [uploadingCapaDesktop, setUploadingCapaDesktop] = useState(false);
+
+  function openEditCapa() {
+    setCapaForm({
+      foto: perfil.capaFoto,
+      fotoPosicao: perfil.capaFotoPosicao || "50% 50%",
+      fotoDesktop: perfil.capaFotoDesktop,
+      fotoPosicaoDesktop: perfil.capaFotoPosicaoDesktop || "50% 50%",
+    });
+    setCapaTab("mobile");
+    setCapaModalOpen(true);
+  }
+
+  async function saveCapa() {
+    setSavingCapa(true);
+    await savePerfil({
+      ...perfil,
+      capaFoto: capaForm.foto,
+      capaFotoPosicao: capaForm.foto ? capaForm.fotoPosicao : "50% 50%",
+      capaFotoDesktop: capaForm.fotoDesktop,
+      capaFotoPosicaoDesktop: capaForm.fotoDesktop
+        ? capaForm.fotoPosicaoDesktop
+        : "50% 50%",
+    });
+    setSavingCapa(false);
+    setCapaModalOpen(false);
   }
 
   const [barbeariaModalOpen, setBarbeariaModalOpen] = useState(false);
@@ -1550,6 +1696,32 @@ function Config() {
         </button>
       </div>
 
+      {/* Foto de capa */}
+      <div>
+        <p className="text-xs font-semibold text-[#656565] uppercase pb-2">
+          Foto de capa
+        </p>
+        <button
+          type="button"
+          onClick={openEditCapa}
+          className="relative w-full h-32 rounded-xl border-2 border-[#F1f1f1] bg-[#505050] overflow-hidden flex items-center justify-center"
+        >
+          {perfil.capaFoto ? (
+            <img
+              src={perfil.capaFoto}
+              alt="Capa"
+              className="w-full h-full object-cover"
+              style={{ objectPosition: perfil.capaFotoPosicao }}
+            />
+          ) : (
+            <Camera className="w-7 h-7 text-white/70" />
+          )}
+          <span className="absolute bottom-2 right-2 rounded-full bg-black/70 text-white text-xs font-semibold px-3 py-1.5">
+            Editar
+          </span>
+        </button>
+      </div>
+
       {/* Barbearia */}
       <div>
         <p className="text-xs font-semibold text-[#656565] uppercase pb-2">
@@ -1601,11 +1773,11 @@ function Config() {
                     onClick={() => toggleDiaFuncionamento(dia)}
                     className={[
                       "w-9 h-9 rounded-full text-xs font-bold shrink-0 border-2 transition-colors",
-                      !active
-                        ? "bg-white text-[#656565] border-[#F1f1f1]"
-                        : personalizado
-                          ? "bg-yellow-400 text-black border-yellow-400"
-                          : "bg-black text-white border-black",
+                      personalizado
+                        ? "bg-yellow-400 text-black border-yellow-400"
+                        : active
+                          ? "bg-black text-white border-black"
+                          : "bg-white text-[#656565] border-[#F1f1f1]",
                     ].join(" ")}
                   >
                     {letra}
@@ -2307,6 +2479,185 @@ function Config() {
             className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
           />
         </div>
+      </BottomSheet>
+
+      {/* Modal: Foto de capa */}
+      <BottomSheet
+        open={capaModalOpen}
+        onClose={() => setCapaModalOpen(false)}
+        title="Foto de capa"
+        footer={
+          <button
+            type="button"
+            onClick={saveCapa}
+            disabled={savingCapa || uploadingCapaMobile || uploadingCapaDesktop}
+            className="w-full rounded-full bg-black text-white py-3.5 text-sm font-semibold disabled:opacity-40"
+          >
+            {savingCapa ? "Salvando..." : "Salvar"}
+          </button>
+        }
+      >
+        <div className="flex gap-2 rounded-full border-2 border-[#F1f1f1] p-1 self-start">
+          <button
+            type="button"
+            onClick={() => setCapaTab("mobile")}
+            className={[
+              "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+              capaTab === "mobile" ? "bg-black text-white" : "text-[#656565]",
+            ].join(" ")}
+          >
+            Celular
+          </button>
+          <button
+            type="button"
+            onClick={() => setCapaTab("desktop")}
+            className={[
+              "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+              capaTab === "desktop" ? "bg-black text-white" : "text-[#656565]",
+            ].join(" ")}
+          >
+            Computador
+          </button>
+        </div>
+
+        {capaTab === "mobile" ? (
+          <>
+            <label className="relative cursor-pointer block">
+              <div className="w-full h-32 rounded-xl bg-[#F1f1f1] border-2 border-[#E0E0E0] overflow-hidden flex items-center justify-center">
+                {capaForm.foto ? (
+                  <img
+                    src={capaForm.foto}
+                    alt="Capa (celular)"
+                    className="w-full h-full object-cover"
+                    style={{ objectPosition: capaForm.fotoPosicao }}
+                  />
+                ) : (
+                  <Camera className="w-7 h-7 text-[#999]" />
+                )}
+                {uploadingCapaMobile && (
+                  <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 animate-spin text-black" />
+                  </div>
+                )}
+              </div>
+              <div className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-black border-2 border-white flex items-center justify-center">
+                <Plus className="w-4 h-4 text-white" />
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setUploadingCapaMobile(true);
+                  try {
+                    const url = await uploadPhoto(file);
+                    setCapaForm((p) => ({
+                      ...p,
+                      foto: url,
+                      fotoPosicao: "50% 50%",
+                    }));
+                  } catch {
+                  } finally {
+                    setUploadingCapaMobile(false);
+                  }
+                }}
+              />
+            </label>
+            {capaForm.foto && (
+              <FocalPointPicker
+                key="mobile"
+                src={capaForm.foto}
+                value={capaForm.fotoPosicao}
+                onChange={(v) =>
+                  setCapaForm((p) => ({ ...p, fotoPosicao: v }))
+                }
+                aspectRatio="390 / 340"
+                label="Destaque no celular"
+              />
+            )}
+          </>
+        ) : (
+          <>
+            <label className="relative cursor-pointer block">
+              <div className="w-full h-32 rounded-xl bg-[#F1f1f1] border-2 border-[#E0E0E0] overflow-hidden flex items-center justify-center">
+                {capaForm.fotoDesktop || capaForm.foto ? (
+                  <img
+                    src={capaForm.fotoDesktop || capaForm.foto}
+                    alt="Capa (computador)"
+                    className="w-full h-full object-cover"
+                    style={{ objectPosition: capaForm.fotoPosicaoDesktop }}
+                  />
+                ) : (
+                  <Camera className="w-7 h-7 text-[#999]" />
+                )}
+                {uploadingCapaDesktop && (
+                  <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 animate-spin text-black" />
+                  </div>
+                )}
+              </div>
+              <div className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-black border-2 border-white flex items-center justify-center">
+                <Plus className="w-4 h-4 text-white" />
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setUploadingCapaDesktop(true);
+                  try {
+                    const url = await uploadPhoto(file);
+                    setCapaForm((p) => ({
+                      ...p,
+                      fotoDesktop: url,
+                      fotoPosicaoDesktop: "50% 50%",
+                    }));
+                  } catch {
+                  } finally {
+                    setUploadingCapaDesktop(false);
+                  }
+                }}
+              />
+            </label>
+            {!capaForm.fotoDesktop && capaForm.foto && (
+              <p className="text-[11px] text-[#999]">
+                Usando a mesma foto do celular. Envie uma foto para usar
+                só no computador.
+              </p>
+            )}
+            {capaForm.fotoDesktop && (
+              <button
+                type="button"
+                onClick={() =>
+                  setCapaForm((p) => ({
+                    ...p,
+                    fotoDesktop: "",
+                    fotoPosicaoDesktop: "50% 50%",
+                  }))
+                }
+                className="self-start text-xs font-semibold text-[#656565] underline"
+              >
+                Usar a mesma foto do celular
+              </button>
+            )}
+            {(capaForm.fotoDesktop || capaForm.foto) && (
+              <FocalPointPicker
+                key="desktop"
+                src={capaForm.fotoDesktop || capaForm.foto}
+                value={capaForm.fotoPosicaoDesktop}
+                onChange={(v) =>
+                  setCapaForm((p) => ({ ...p, fotoPosicaoDesktop: v }))
+                }
+                aspectRatio="1440 / 430"
+                label="Destaque no computador"
+              />
+            )}
+          </>
+        )}
       </BottomSheet>
 
       {/* Modal: Barbearia */}

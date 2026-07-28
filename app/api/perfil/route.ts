@@ -11,6 +11,10 @@ const defaults = {
   barbeiroNome: "Fabio",
   barbeiroDescricao: null as string | null,
   barbeiroFoto: null as string | null,
+  capaFoto: null as string | null,
+  capaFotoPosicao: null as string | null,
+  capaFotoDesktop: null as string | null,
+  capaFotoPosicaoDesktop: null as string | null,
 };
 
 export async function GET() {
@@ -28,6 +32,10 @@ export async function PUT(req: NextRequest) {
     barbeiroNome,
     barbeiroDescricao,
     barbeiroFoto,
+    capaFoto,
+    capaFotoPosicao,
+    capaFotoDesktop,
+    capaFotoPosicaoDesktop,
   } = await req.json();
 
   const data = {
@@ -37,6 +45,10 @@ export async function PUT(req: NextRequest) {
     barbeiroNome,
     barbeiroDescricao,
     barbeiroFoto,
+    capaFoto,
+    capaFotoPosicao,
+    capaFotoDesktop,
+    capaFotoPosicaoDesktop,
   };
 
   const perfil = await prisma.perfilNegocio.upsert({

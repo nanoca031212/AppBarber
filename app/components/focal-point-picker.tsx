@@ -6,13 +6,21 @@ type FocalPointPickerProps = {
   src: string;
   value: string;
   onChange: (value: string) => void;
+  aspectRatio?: string;
+  label?: string;
 };
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
-export function FocalPointPicker({ src, value, onChange }: FocalPointPickerProps) {
+export function FocalPointPicker({
+  src,
+  value,
+  onChange,
+  aspectRatio = "16 / 9",
+  label = "Destaque da foto",
+}: FocalPointPickerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [xStr, yStr] = value.split(" ");
@@ -44,13 +52,14 @@ export function FocalPointPicker({ src, value, onChange }: FocalPointPickerProps
   return (
     <div className="flex flex-col gap-1.5">
       <p className="text-xs font-semibold text-[#656565] uppercase">
-        Destaque da foto
+        {label}
       </p>
       <div
         ref={containerRef}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
-        className="relative w-full aspect-video rounded-xl overflow-hidden bg-black/5 cursor-crosshair touch-none select-none"
+        style={{ aspectRatio }}
+        className="relative w-full rounded-xl overflow-hidden bg-black/5 cursor-crosshair touch-none select-none"
       >
         <img
           src={src}

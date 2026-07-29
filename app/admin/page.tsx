@@ -33,13 +33,27 @@ import {
   UserPlus,
   Camera,
   Loader2,
+  MessageCircle,
+  QrCode,
+  Smartphone,
+  UserCog,
+  FileText,
+  Bell,
+  Gift,
+  Star,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { FocalPointPicker } from "@/app/components/focal-point-picker";
 import { uploadPhoto } from "@/lib/upload-photo";
 
-type AdminTab = "dashboard" | "agenda" | "clientes" | "gestor" | "config";
+type AdminTab =
+  | "dashboard"
+  | "agenda"
+  | "clientes"
+  | "whatsapp"
+  | "gestor"
+  | "config";
 
 import type { Service, Barber } from "@/app/context/store";
 
@@ -3209,6 +3223,590 @@ function Gestor() {
   );
 }
 
+type WhatsappSection = "conexoes" | "equipe" | "templates" | "notificacoes";
+
+const whatsappSections: Array<{
+  value: WhatsappSection;
+  label: string;
+  icon: React.ReactNode;
+}> = [
+  {
+    value: "conexoes",
+    label: "Conexões",
+    icon: <QrCode className="w-4 h-4" />,
+  },
+  { value: "equipe", label: "Equipe", icon: <UserCog className="w-4 h-4" /> },
+  {
+    value: "templates",
+    label: "Templates",
+    icon: <FileText className="w-4 h-4" />,
+  },
+  {
+    value: "notificacoes",
+    label: "Notificações",
+    icon: <Bell className="w-4 h-4" />,
+  },
+];
+
+type WhatsappStatusResponse = {
+  status: "connecting" | "open" | "close";
+  hasQr: boolean;
+  phone: string | null;
+  offline?: boolean;
+};
+
+const DEFAULT_WHATSAPP_STATUS: WhatsappStatusResponse = {
+  status: "close",
+  hasQr: false,
+  phone: null,
+};
+
+function formatWhatsappPhone(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length <= 11) return `+${digits}`;
+  return `+${digits.slice(0, 2)} ${digits.slice(2)}`;
+}
+
+function WhatsappConexoes() {
+  const [data, setData] = useState<WhatsappStatusResponse>(
+    DEFAULT_WHATSAPP_STATUS,
+  );
+  const [qrTick, setQrTick] = useState(0);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function poll() {
+      try {
+        const res = await fetch("/api/whatsapp/status", { cache: "no-store" });
+        const json: WhatsappStatusResponse = await res.json();
+        if (cancelled) return;
+        setData(json);
+        setQrTick((t) => t + 1);
+      } catch {
+        if (!cancelled) setData({ ...DEFAULT_WHATSAPP_STATUS, offline: true });
+      }
+    }
+
+    poll();
+    const interval = setInterval(poll, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/whatsapp/logout", { method: "POST" });
+    } catch {}
+    setLoggingOut(false);
+  }
+
+  const connected = data.status === "open";
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-5 flex flex-col items-center gap-3 text-center">
+        <div
+          className={[
+            "w-14 h-14 rounded-full flex items-center justify-center border-2",
+            connected
+              ? "bg-emerald-50 border-emerald-200"
+              : "bg-white border-[#F1f1f1]",
+          ].join(" ")}
+        >
+          <Smartphone
+            className={`w-6 h-6 ${connected ? "text-emerald-600" : "text-[#656565]"}`}
+          />
+        </div>
+        <div>
+          <p className="font-bold">
+            {data.offline
+              ? "Não foi possível verificar a conexão"
+              : connected
+                ? "WhatsApp conectado"
+                : "WhatsApp desconectado"}
+          </p>
+          <p className="text-sm text-[#656565]">
+            {data.offline
+              ? "Tente recarregar a página em instantes"
+              : connected
+                ? data.phone
+                  ? formatWhatsappPhone(data.phone)
+                  : "Número conectado"
+                : "Escaneie o QR code abaixo para conectar"}
+          </p>
+        </div>
+        {connected && (
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="rounded-full border-2 border-[#F1f1f1] bg-white px-5 py-2.5 text-sm font-semibold text-red-500 disabled:opacity-60"
+          >
+            {loggingOut ? "Desconectando..." : "Desconectar"}
+          </button>
+        )}
+      </div>
+
+      {!connected && !data.offline && (
+        <div className="rounded-xl border-2 border-dashed border-[#F1f1f1] bg-white p-6 flex flex-col items-center gap-3 text-center">
+          {data.hasQr ? (
+            <img
+              key={qrTick}
+              src={`/api/whatsapp/qr?t=${qrTick}`}
+              alt="QR code do WhatsApp"
+              className="w-48 h-48 rounded-lg border-2 border-[#F1f1f1]"
+            />
+          ) : (
+            <div className="w-48 h-48 rounded-lg bg-[#FAFAFA] border-2 border-[#F1f1f1] flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-[#656565] animate-spin" />
+            </div>
+          )}
+          <p className="text-xs text-[#656565] max-w-[240px]">
+            Abra o WhatsApp no celular da barbearia, toque em Aparelhos
+            conectados e escaneie o código para conectar
+          </p>
+        </div>
+      )}
+
+      {connected && (
+        <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm">Sessão ativa</p>
+            <p className="text-xs text-[#656565]">
+              Recebendo e enviando mensagens automaticamente
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type EquipeWhatsappConfig = {
+  telefone: string;
+  recebeNovoAgendamento: boolean;
+  recebeCancelamento: boolean;
+};
+
+const DEFAULT_EQUIPE_CONFIG: EquipeWhatsappConfig = {
+  telefone: "",
+  recebeNovoAgendamento: true,
+  recebeCancelamento: true,
+};
+
+function WhatsappEquipe() {
+  const { barbers } = useStore();
+  const [config, setConfig] = useState<Record<string, EquipeWhatsappConfig>>(
+    {},
+  );
+
+  function getConfig(id: string): EquipeWhatsappConfig {
+    return config[id] ?? DEFAULT_EQUIPE_CONFIG;
+  }
+
+  function updateConfig(id: string, patch: Partial<EquipeWhatsappConfig>) {
+    setConfig((prev) => ({
+      ...prev,
+      [id]: { ...getConfig(id), ...patch },
+    }));
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-sm text-[#656565]">
+        Defina o número de WhatsApp de cada barbeiro e quais avisos eles
+        recebem automaticamente.
+      </p>
+      {barbers.length === 0 && (
+        <p className="text-center text-[#656565] py-8">
+          Nenhum barbeiro cadastrado ainda.
+        </p>
+      )}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
+        {barbers.map((b) => {
+          const cfg = getConfig(b.id);
+          return (
+            <div
+              key={b.id}
+              className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3"
+            >
+              <div className="flex items-center gap-3">
+                <Avatar
+                  initials={b.initials}
+                  src={b.photo}
+                  position={b.photoPosition}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm truncate">{b.name}</p>
+                  <p className="text-xs text-[#656565] truncate">Barbeiro</p>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
+                  WhatsApp
+                </label>
+                <input
+                  type="tel"
+                  value={cfg.telefone}
+                  onChange={(e) =>
+                    updateConfig(b.id, { telefone: e.target.value })
+                  }
+                  placeholder="(11) 91234-5678"
+                  className="w-full rounded-full border-2 border-[#F1f1f1] bg-white px-4 py-2 text-sm focus:outline-none focus:border-black"
+                />
+              </div>
+              <div className="flex flex-col gap-2 pt-1 border-t border-[#F1f1f1]">
+                <div className="flex items-center justify-between pt-2">
+                  <p className="text-sm font-semibold">Novo agendamento</p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateConfig(b.id, {
+                        recebeNovoAgendamento: !cfg.recebeNovoAgendamento,
+                      })
+                    }
+                  >
+                    {cfg.recebeNovoAgendamento ? (
+                      <ToggleRight className="w-6 h-6 text-black" />
+                    ) : (
+                      <ToggleLeft className="w-6 h-6 text-[#656565]" />
+                    )}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold">Cancelamento</p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateConfig(b.id, {
+                        recebeCancelamento: !cfg.recebeCancelamento,
+                      })
+                    }
+                  >
+                    {cfg.recebeCancelamento ? (
+                      <ToggleRight className="w-6 h-6 text-black" />
+                    ) : (
+                      <ToggleLeft className="w-6 h-6 text-[#656565]" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+type WhatsappTemplate = {
+  id: string;
+  titulo: string;
+  descricao: string;
+  mensagem: string;
+};
+
+const DEFAULT_WHATSAPP_TEMPLATES: WhatsappTemplate[] = [
+  {
+    id: "confirmacao",
+    titulo: "Confirmação de agendamento",
+    descricao: "Enviada assim que o cliente agenda um horário",
+    mensagem:
+      "Olá {{cliente}}! Seu horário na {{barbearia}} foi confirmado para {{data}} às {{horario}}. Até lá! ✂️",
+  },
+  {
+    id: "lembrete",
+    titulo: "Lembrete 24h antes",
+    descricao: "Enviada um dia antes do horário marcado",
+    mensagem:
+      "Oi {{cliente}}, passando para lembrar do seu horário amanhã, {{data}} às {{horario}}, na {{barbearia}}.",
+  },
+  {
+    id: "cancelamento",
+    titulo: "Cancelamento",
+    descricao: "Enviada quando um agendamento é cancelado",
+    mensagem:
+      "Olá {{cliente}}, seu horário do dia {{data}} às {{horario}} foi cancelado. Qualquer dúvida, chama a gente por aqui.",
+  },
+  {
+    id: "aniversario",
+    titulo: "Aniversário",
+    descricao: "Enviada no aniversário do cliente",
+    mensagem:
+      "Feliz aniversário, {{cliente}}! 🎉 Passe na {{barbearia}} essa semana e ganhe um desconto especial.",
+  },
+  {
+    id: "catalogo",
+    titulo: "Catálogo",
+    descricao: "Envia a lista de serviços e preços da barbearia",
+    mensagem:
+      "Olá {{cliente}}! Aqui está o catálogo de serviços da {{barbearia}} 💈 Dá uma olhada e me diz qual você quer agendar.",
+  },
+  {
+    id: "servico",
+    titulo: "Serviço",
+    descricao: "Enviada com os detalhes de um serviço específico",
+    mensagem:
+      "O serviço {{servico}} na {{barbearia}} leva {{duracao}} e custa {{preco}}. Quer que eu agende um horário pra você?",
+  },
+  {
+    id: "agendamento",
+    titulo: "Agendamento",
+    descricao: "Enviada com o link para o cliente marcar um horário",
+    mensagem:
+      "Olá {{cliente}}! Para agendar seu horário na {{barbearia}}, é só acessar: {{link}}",
+  },
+];
+
+const TEMPLATE_VARIABLES = [
+  "{{cliente}}",
+  "{{barbearia}}",
+  "{{data}}",
+  "{{horario}}",
+  "{{servico}}",
+  "{{duracao}}",
+  "{{preco}}",
+  "{{link}}",
+];
+
+function WhatsappTemplates() {
+  const [templates, setTemplates] = useState(DEFAULT_WHATSAPP_TEMPLATES);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  function startEdit(t: WhatsappTemplate) {
+    setDrafts((prev) => ({ ...prev, [t.id]: prev[t.id] ?? t.mensagem }));
+    setExpanded((prev) => (prev === t.id ? null : t.id));
+  }
+
+  function saveTemplate(id: string) {
+    setTemplates((prev) =>
+      prev.map((t) =>
+        t.id === id ? { ...t, mensagem: drafts[id] ?? t.mensagem } : t,
+      ),
+    );
+    setExpanded(null);
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-sm text-[#656565]">
+        Personalize as mensagens automáticas enviadas aos clientes.
+      </p>
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
+        {templates.map((t) => {
+          const isExpanded = expanded === t.id;
+          return (
+            <div
+              key={t.id}
+              className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden"
+            >
+              <button
+                type="button"
+                onClick={() => startEdit(t)}
+                className="w-full flex items-center gap-3 p-4 text-left"
+              >
+                <div className="w-9 h-9 rounded-lg bg-black flex items-center justify-center shrink-0">
+                  <FileText className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm">{t.titulo}</p>
+                  <p className="text-xs text-[#656565] truncate">
+                    {t.descricao}
+                  </p>
+                </div>
+                <Pencil className="w-4 h-4 text-[#656565] shrink-0" />
+              </button>
+
+              {isExpanded && (
+                <div className="px-4 pb-4 border-t border-[#F1f1f1] pt-3 flex flex-col gap-3">
+                  <textarea
+                    value={drafts[t.id] ?? t.mensagem}
+                    onChange={(e) =>
+                      setDrafts((prev) => ({
+                        ...prev,
+                        [t.id]: e.target.value,
+                      }))
+                    }
+                    rows={4}
+                    className="w-full rounded-xl border-2 border-[#F1f1f1] bg-white px-4 py-3 text-sm focus:outline-none focus:border-black resize-none"
+                  />
+                  <div className="flex flex-wrap gap-1.5">
+                    {TEMPLATE_VARIABLES.map((v) => (
+                      <span
+                        key={v}
+                        className="rounded-full bg-white border border-[#F1f1f1] px-2 py-1 text-xs font-mono text-[#656565]"
+                      >
+                        {v}
+                      </span>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => saveTemplate(t.id)}
+                    className="w-full rounded-full bg-black text-white py-2.5 text-sm font-semibold"
+                  >
+                    Salvar
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+type NotificationToggleId =
+  | "novoAgendamento"
+  | "lembrete24h"
+  | "confirmacao"
+  | "cancelamento"
+  | "aniversario"
+  | "pesquisaSatisfacao";
+
+const NOTIFICATION_TOGGLES: Array<{
+  id: NotificationToggleId;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+}> = [
+  {
+    id: "novoAgendamento",
+    label: "Novo agendamento",
+    description: "Avisa a equipe quando um cliente agenda um horário",
+    icon: <CalendarDays className="w-4 h-4 text-[#656565]" />,
+  },
+  {
+    id: "lembrete24h",
+    label: "Lembrete 24h antes",
+    description: "Envia lembrete automático para o cliente",
+    icon: <Clock className="w-4 h-4 text-[#656565]" />,
+  },
+  {
+    id: "confirmacao",
+    label: "Confirmação de agendamento",
+    description: "Confirma o horário assim que ele é marcado",
+    icon: <CheckCircle2 className="w-4 h-4 text-[#656565]" />,
+  },
+  {
+    id: "cancelamento",
+    label: "Cancelamento",
+    description: "Avisa o cliente e a equipe sobre cancelamentos",
+    icon: <XCircle className="w-4 h-4 text-[#656565]" />,
+  },
+  {
+    id: "aniversario",
+    label: "Aniversário do cliente",
+    description: "Envia mensagem de parabéns automaticamente",
+    icon: <Gift className="w-4 h-4 text-[#656565]" />,
+  },
+  {
+    id: "pesquisaSatisfacao",
+    label: "Pesquisa de satisfação",
+    description: "Envia após o atendimento ser concluído",
+    icon: <Star className="w-4 h-4 text-[#656565]" />,
+  },
+];
+
+function WhatsappNotificacoes() {
+  const [enabled, setEnabled] = useState<
+    Record<NotificationToggleId, boolean>
+  >({
+    novoAgendamento: true,
+    lembrete24h: true,
+    confirmacao: true,
+    cancelamento: true,
+    aniversario: false,
+    pesquisaSatisfacao: false,
+  });
+
+  return (
+    <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
+      {NOTIFICATION_TOGGLES.map((n, i) => (
+        <div
+          key={n.id}
+          className={[
+            "flex items-center gap-3 p-4",
+            i < NOTIFICATION_TOGGLES.length - 1
+              ? "border-b border-[#F1f1f1]"
+              : "",
+          ].join(" ")}
+        >
+          <div className="w-9 h-9 rounded-lg bg-white border-2 border-[#F1f1f1] flex items-center justify-center shrink-0">
+            {n.icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm">{n.label}</p>
+            <p className="text-xs text-[#656565]">{n.description}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              setEnabled((prev) => ({ ...prev, [n.id]: !prev[n.id] }))
+            }
+            className="shrink-0"
+          >
+            {enabled[n.id] ? (
+              <ToggleRight className="w-7 h-7 text-black" />
+            ) : (
+              <ToggleLeft className="w-7 h-7 text-[#656565]" />
+            )}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Whatsapp() {
+  const [section, setSection] = useState<WhatsappSection>("conexoes");
+
+  return (
+    <div className="flex flex-col gap-5 lg:max-w-4xl xl:max-w-7xl lg:mx-auto">
+      <div>
+        <h1 className="text-2xl font-bold">WhatsApp</h1>
+        <p className="text-sm text-[#656565]">
+          Conexão, equipe, templates e notificações automáticas
+        </p>
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto no-scrollbar">
+        {whatsappSections.map((s) => (
+          <button
+            key={s.value}
+            type="button"
+            onClick={() => setSection(s.value)}
+            className={[
+              "flex items-center gap-1.5 rounded-full border-2 px-4 py-2 text-sm font-semibold shrink-0",
+              section === s.value
+                ? "bg-black text-white border-black"
+                : "bg-[#FAFAFA] text-[#656565] border-[#F1f1f1]",
+            ].join(" ")}
+          >
+            {s.icon}
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {section === "conexoes" && <WhatsappConexoes />}
+      {section === "equipe" && <WhatsappEquipe />}
+      {section === "templates" && <WhatsappTemplates />}
+      {section === "notificacoes" && <WhatsappNotificacoes />}
+    </div>
+  );
+}
+
 const navItems: Array<{ tab: AdminTab; label: string; icon: React.ReactNode }> =
   [
     {
@@ -3222,6 +3820,11 @@ const navItems: Array<{ tab: AdminTab; label: string; icon: React.ReactNode }> =
       icon: <CalendarDays className="w-5 h-5" />,
     },
     { tab: "clientes", label: "Clientes", icon: <Users className="w-5 h-5" /> },
+    {
+      tab: "whatsapp",
+      label: "WhatsApp",
+      icon: <MessageCircle className="w-5 h-5" />,
+    },
     { tab: "gestor", label: "Gestor", icon: <BarChart2 className="w-5 h-5" /> },
     { tab: "config", label: "Config", icon: <Settings className="w-5 h-5" /> },
   ];
@@ -3263,6 +3866,7 @@ const Admin = () => {
         {activeTab === "dashboard" && <Dashboard />}
         {activeTab === "agenda" && <Agenda />}
         {activeTab === "clientes" && <Clientes />}
+        {activeTab === "whatsapp" && <Whatsapp />}
         {activeTab === "gestor" && <Gestor />}
         {activeTab === "config" && <Config />}
       </div>

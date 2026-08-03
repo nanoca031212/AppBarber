@@ -17,6 +17,20 @@ const Barbeiros = () => {
 
   return (
     <div className="py-6 pb-20 md:pb-0 space-y-6">
+      <Link
+        href="/encaixe"
+        className="flex items-center justify-between gap-3 rounded-xl bg-black text-white px-4 py-4"
+      >
+        <div>
+          <p className="font-bold text-sm">Chegou sem hora marcada?</p>
+          <p className="text-xs text-white/70">
+            Escolha o serviço, pague e seja atendido agora.
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full bg-white text-black text-xs font-semibold px-4 py-2">
+          Fazer encaixe
+        </span>
+      </Link>
       <div>
         <div className="pb-3">
           <h1 className="font-semibold uppercase text-sm">Serviços</h1>

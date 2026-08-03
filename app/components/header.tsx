@@ -3,6 +3,7 @@
 import {
   CalendarDays,
   Camera,
+  CreditCard,
   Home,
   LogIn,
   Menu,
@@ -83,7 +84,7 @@ const Header = () => {
             <SheetTitle>Barber</SheetTitle>
           </SheetHeader>
           <div className="flex flex-col   gap-1 px-4 pt-2">
-            <div className="flex  items-center gap-4 py-6">
+            <div className="flex  items-center gap-4 py-6 lg:py-3">
               {user ? (
                 <>
                   <button
@@ -125,6 +126,12 @@ const Header = () => {
                   <h1 className="flex-1 text-lg font-semibold">
                     Olá, faça seu login!
                   </h1>
+                  <div
+                    title="Pagamento mensal"
+                    className="w-10 h-10 rounded-full bg-[#FAFAFA] border-2 border-[#F1F1F1] flex items-center justify-center shrink-0"
+                  >
+                    <CreditCard className="w-5 h-5 text-black" />
+                  </div>
                   <Button className="h-10 w-12">
                     <LogIn className="w-12 h-12" />
                   </Button>

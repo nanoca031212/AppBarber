@@ -18,29 +18,32 @@ model Cliente {
 }
 
 model Barbeiro {
-  id           String            @id @default(cuid())
-  nome         String
-  descricao    String?
-  foto         String?
-  fotoPosicao  String?
-  ativo        Boolean           @default(true)
-  createdAt    DateTime          @default(now())
-  reservas     Reserva[]
-  servicos     BarbeiroServico[]
+  id                       String            @id @default(cuid())
+  nome                     String
+  descricao                String?
+  foto                     String?
+  fotoPosicao              String?
+  ativo                    Boolean           @default(true)
+  createdAt                DateTime          @default(now())
+  notificarCancelamento    Boolean           @default(true)
+  notificarNovoAgendamento Boolean           @default(true)
+  whatsapp                 String?
+  servicos                 BarbeiroServico[]
+  reservas                 Reserva[]
 }
 
 model Servico {
-  id           String            @id @default(cuid())
-  nome         String
-  descricao    String?
-  preco        Float
-  duracao      Int
-  foto         String?
-  fotoPosicao  String?
-  ativo        Boolean           @default(true)
-  createdAt    DateTime          @default(now())
-  reservas     ReservaServico[]
-  barbeiros    BarbeiroServico[]
+  id          String            @id @default(cuid())
+  nome        String
+  descricao   String?
+  preco       Float
+  duracao     Int
+  foto        String?
+  fotoPosicao String?
+  ativo       Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  barbeiros   BarbeiroServico[]
+  reservas    ReservaServico[]
 }
 
 model BarbeiroServico {
@@ -53,16 +56,16 @@ model BarbeiroServico {
 }
 
 model Reserva {
-  id         String         @id @default(cuid())
+  id         String           @id @default(cuid())
   clienteId  String
   barbeiroId String
   data       DateTime
   horario    String
-  status     StatusReserva  @default(PENDENTE)
+  status     StatusReserva    @default(PENDENTE)
   total      Float
-  createdAt  DateTime       @default(now())
-  cliente    Cliente        @relation(fields: [clienteId], references: [id])
-  barbeiro   Barbeiro       @relation(fields: [barbeiroId], references: [id])
+  createdAt  DateTime         @default(now())
+  barbeiro   Barbeiro         @relation(fields: [barbeiroId], references: [id])
+  cliente    Cliente          @relation(fields: [clienteId], references: [id])
   servicos   ReservaServico[]
 }
 
@@ -75,13 +78,6 @@ model ReservaServico {
   @@id([reservaId, servicoId])
 }
 
-enum StatusReserva {
-  PENDENTE
-  CONFIRMADO
-  CANCELADO
-  CONCLUIDO
-}
-
 model HorarioFuncionamento {
   id                String   @id @default(cuid())
   horaInicio        String   @default("08:00")
@@ -91,7 +87,7 @@ model HorarioFuncionamento {
   pausaInicio       String?
   pausaFim          String?
   diasFuncionamento Int[]    @default([1, 2, 3, 4, 5, 6])
-  updatedAt   DateTime @updatedAt
+  updatedAt         DateTime @updatedAt
 }
 
 model HorarioDiaPersonalizado {
@@ -105,16 +101,40 @@ model HorarioDiaPersonalizado {
 }
 
 model PerfilNegocio {
-  id                 String   @id @default(cuid())
-  nomeBarbearia      String
-  endereco           String?
-  telefone           String?
-  barbeiroNome       String
-  barbeiroDescricao  String?
-  barbeiroFoto       String?
-  capaFoto           String?
-  capaFotoPosicao    String?
-  capaFotoDesktop        String?
+  id                     String   @id @default(cuid())
+  nomeBarbearia          String
+  endereco               String?
+  telefone               String?
+  barbeiroNome           String
+  barbeiroDescricao      String?
+  barbeiroFoto           String?
+  updatedAt              DateTime @updatedAt
+  capaFoto               String?
+  capaFotoPosicao        String?
   capaFotoPosicaoDesktop String?
-  updatedAt          DateTime @updatedAt
+  capaFotoDesktop        String?
+}
+
+model WhatsappNotificacaoConfig {
+  id                     String   @id
+  confirmacaoAgendamento Boolean  @default(true)
+  lembreteAgendamento    Boolean  @default(true)
+  horasAntesLembrete     Int      @default(2)
+  avisoCancelamento      Boolean  @default(true)
+  updatedAt              DateTime
+}
+
+model WhatsappTemplate {
+  id        String   @id
+  nome      String
+  mensagem  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
+
+enum StatusReserva {
+  PENDENTE
+  CONFIRMADO
+  CANCELADO
+  CONCLUIDO
 }

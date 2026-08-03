@@ -8,22 +8,15 @@ import { Boom } from "@hapi/boom";
 import fs from "node:fs";
 import path from "node:path";
 import pino from "pino";
-import {
-  onChatsUpdate,
-  onChatsUpsert,
-  onContactsUpdate,
-  onContactsUpsert,
-  onHistorySet,
-  onMessagesUpsert,
-} from "./store";
+import { createWhatsappStore } from "./store";
 
-const SESSION_DIR = process.env.BAILEYS_SESSION_PATH
+const SESSION_ROOT = process.env.BAILEYS_SESSION_PATH
   ? path.resolve(process.env.BAILEYS_SESSION_PATH)
   : path.join(process.cwd(), "lib", "whatsapp", "session");
 
 const logger = pino({ level: process.env.BAILEYS_LOG_LEVEL || "silent" }) as any;
 
-type WhatsappState = {
+type WhatsappInstance = {
   sock: WASocket | null;
   currentQr: string | null;
   status: "connecting" | "open" | "close";
@@ -35,48 +28,78 @@ type WhatsappState = {
 // simples `let` no topo do arquivo não é compartilhado entre eles — cada um
 // enxergaria sua própria cópia "vazia". Guardar em globalThis garante uma
 // única instância por processo Node, igual ao truque do singleton do Prisma.
+// Cada barbeiro tem sua própria sessão do WhatsApp, por isso o estado é
+// indexado por instanceId (o id do barbeiro) em vez de um único objeto.
 const globalForWhatsapp = globalThis as unknown as {
-  __whatsappState?: WhatsappState;
+  __whatsappInstances?: Map<string, WhatsappInstance>;
 };
 
-const state: WhatsappState = globalForWhatsapp.__whatsappState ?? {
-  sock: null,
-  currentQr: null,
-  status: "connecting",
-  starting: null,
-};
-globalForWhatsapp.__whatsappState = state;
+const instances = globalForWhatsapp.__whatsappInstances ?? new Map();
+globalForWhatsapp.__whatsappInstances = instances;
 
-export function getSocket(): WASocket {
-  if (!state.sock) throw new Error("Socket do WhatsApp ainda não está pronto");
-  return state.sock;
+function sessionDir(instanceId: string) {
+  return path.join(SESSION_ROOT, instanceId);
 }
 
-export function getQr() {
-  return state.currentQr;
+function getInstance(instanceId: string): WhatsappInstance {
+  let inst = instances.get(instanceId);
+  if (!inst) {
+    inst = { sock: null, currentQr: null, status: "close", starting: null };
+    instances.set(instanceId, inst);
+  }
+  return inst;
 }
 
-export function getStatus() {
-  return state.status;
+// Sessões salvas em disco de conexões anteriores — usado no boot para
+// reconectar automaticamente as instâncias que já estavam ativas.
+export function listSavedInstanceIds(): string[] {
+  try {
+    return fs
+      .readdirSync(SESSION_ROOT, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name);
+  } catch {
+    return [];
+  }
 }
 
-export function getPhone(): string | null {
-  const jid = state.sock?.user?.id;
+export function isStarted(instanceId: string) {
+  return instances.has(instanceId);
+}
+
+export function getQr(instanceId: string) {
+  return instances.get(instanceId)?.currentQr ?? null;
+}
+
+export function getStatus(instanceId: string): WhatsappInstance["status"] {
+  return instances.get(instanceId)?.status ?? "close";
+}
+
+export function getPhone(instanceId: string): string | null {
+  const jid = instances.get(instanceId)?.sock?.user?.id;
   if (!jid) return null;
   return jid.split(":")[0].split("@")[0];
 }
 
-// Só existe um socket por processo do servidor Next. instrumentation.ts
-// chama isto uma vez no boot; se algo tentar chamar de novo enquanto a
-// primeira chamada ainda está em andamento, reaproveita a mesma promise.
-export function startSocket(): Promise<WASocket> {
-  if (state.starting) return state.starting;
-  state.starting = connect();
-  return state.starting;
+// Só existe um socket por instância por processo do servidor Next.
+// instrumentation.ts chama isto no boot para cada sessão salva; a rota de
+// "conectar" chama para iniciar uma instância nova sob demanda. Se algo
+// tentar chamar de novo enquanto a primeira chamada ainda está em
+// andamento, reaproveita a mesma promise.
+export function startSocket(instanceId: string): Promise<WASocket> {
+  const inst = getInstance(instanceId);
+  if (inst.starting) return inst.starting;
+  inst.starting = connect(instanceId, inst);
+  return inst.starting;
 }
 
-async function connect(): Promise<WASocket> {
-  const { state: authState, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
+async function connect(
+  instanceId: string,
+  inst: WhatsappInstance,
+): Promise<WASocket> {
+  const { state: authState, saveCreds } = await useMultiFileAuthState(
+    sessionDir(instanceId),
+  );
   const { version } = await fetchLatestBaileysVersion();
 
   const sock = makeWASocket({
@@ -84,7 +107,10 @@ async function connect(): Promise<WASocket> {
     auth: authState,
     logger,
   });
-  state.sock = sock;
+  inst.sock = sock;
+  inst.status = "connecting";
+
+  const store = createWhatsappStore();
 
   sock.ev.on("creds.update", saveCreds);
 
@@ -92,50 +118,61 @@ async function connect(): Promise<WASocket> {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      state.currentQr = qr;
-      state.status = "connecting";
-      console.log("[whatsapp] Novo QR code disponível em /admin (aba WhatsApp)");
+      inst.currentQr = qr;
+      inst.status = "connecting";
+      console.log(
+        `[whatsapp:${instanceId}] Novo QR code disponível em /admin (aba WhatsApp)`,
+      );
     }
 
     if (connection === "open") {
-      state.currentQr = null;
-      state.status = "open";
-      console.log("[whatsapp] Conectado ao WhatsApp.");
+      inst.currentQr = null;
+      inst.status = "open";
+      console.log(`[whatsapp:${instanceId}] Conectado ao WhatsApp.`);
     }
 
     if (connection === "close") {
-      state.status = "close";
-      const statusCode = (lastDisconnect?.error as Boom | undefined)?.output?.statusCode;
+      inst.status = "close";
+      const statusCode = (lastDisconnect?.error as Boom | undefined)?.output
+        ?.statusCode;
       const loggedOut = statusCode === DisconnectReason.loggedOut;
 
       if (loggedOut) {
-        console.log("[whatsapp] Sessão desconectada (logout). Gerando novo QR...");
-        fs.rmSync(SESSION_DIR, { recursive: true, force: true });
+        console.log(
+          `[whatsapp:${instanceId}] Sessão desconectada (logout). Gerando novo QR...`,
+        );
+        fs.rmSync(sessionDir(instanceId), { recursive: true, force: true });
       } else {
-        console.log("[whatsapp] Conexão caiu, reconectando...", statusCode);
+        console.log(
+          `[whatsapp:${instanceId}] Conexão caiu, reconectando...`,
+          statusCode,
+        );
       }
-      state.starting = null;
-      startSocket().catch((err) => console.error("[whatsapp] Falha ao reconectar:", err));
+      inst.starting = null;
+      startSocket(instanceId).catch((err) =>
+        console.error(`[whatsapp:${instanceId}] Falha ao reconectar:`, err),
+      );
     }
   });
 
-  sock.ev.on("messaging-history.set", onHistorySet);
-  sock.ev.on("chats.upsert", onChatsUpsert);
-  sock.ev.on("chats.update", onChatsUpdate);
-  sock.ev.on("contacts.upsert", onContactsUpsert);
-  sock.ev.on("contacts.update", onContactsUpdate);
-  sock.ev.on("messages.upsert", onMessagesUpsert);
+  sock.ev.on("messaging-history.set", store.onHistorySet);
+  sock.ev.on("chats.upsert", store.onChatsUpsert);
+  sock.ev.on("chats.update", store.onChatsUpdate);
+  sock.ev.on("contacts.upsert", store.onContactsUpsert);
+  sock.ev.on("contacts.update", store.onContactsUpdate);
+  sock.ev.on("messages.upsert", store.onMessagesUpsert);
 
   return sock;
 }
 
-// Encerra a sessão atual no WhatsApp (equivalente a "sair" pelo celular).
-// O handler de connection.update acima detecta o loggedOut, limpa a pasta
-// de sessão e reinicia o socket automaticamente, gerando um QR novo.
-export async function logout(): Promise<void> {
-  if (!state.sock) return;
+// Encerra a sessão de uma instância no WhatsApp (equivalente a "sair" pelo
+// celular). O handler de connection.update acima detecta o loggedOut, limpa
+// a pasta de sessão e reinicia o socket automaticamente, gerando um QR novo.
+export async function logout(instanceId: string): Promise<void> {
+  const inst = instances.get(instanceId);
+  if (!inst?.sock) return;
   try {
-    await state.sock.logout();
+    await inst.sock.logout();
   } catch {
     // conexão já pode estar fechada — o handler de close cuida do resto
   }

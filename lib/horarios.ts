@@ -8,12 +8,12 @@ export type HorarioConfig = {
   diasFuncionamento: number[];
 };
 
-function toMinutes(hhmm: string) {
+export function toMinutes(hhmm: string) {
   const [h, m] = hhmm.split(":").map(Number);
   return h * 60 + m;
 }
 
-function toHHMM(minutes: number) {
+export function toHHMM(minutes: number) {
   const h = Math.floor(minutes / 60)
     .toString()
     .padStart(2, "0");
@@ -80,4 +80,39 @@ export function generateTimeSlots(
     slots.push(toHHMM(t));
   }
   return slots;
+}
+
+// Verifica se um horário específico (em minutos, ex: "agora") cabe dentro do
+// funcionamento do dia, fora da pausa e sem conflitar com reservas existentes.
+// Usado pelo encaixe (cliente sem prévia que ocupa o horário atual).
+export function isHorarioDisponivel(
+  config: HorarioConfig,
+  diaSemana: number,
+  minutos: number,
+  duracao: number,
+  ocupados: HorarioOcupado[] = [],
+): boolean {
+  if (!isDiaFuncionamento(config, diaSemana)) return false;
+
+  const start = toMinutes(config.horaInicio);
+  const end = toMinutes(config.horaFim);
+  const fim = minutos + (duracao > 0 ? duracao : config.intervalo);
+
+  if (minutos < start || fim > end) return false;
+
+  const pausaInicio =
+    config.pausaAtiva && config.pausaInicio ? toMinutes(config.pausaInicio) : null;
+  const pausaFim =
+    config.pausaAtiva && config.pausaFim ? toMinutes(config.pausaFim) : null;
+  if (pausaInicio !== null && pausaFim !== null && minutos < pausaFim && fim > pausaInicio) {
+    return false;
+  }
+
+  const conflita = ocupados.some((o) => {
+    const inicio = toMinutes(o.horario);
+    const ocupadoFim = inicio + (o.duracao > 0 ? o.duracao : config.intervalo);
+    return minutos < ocupadoFim && fim > inicio;
+  });
+
+  return !conflita;
 }

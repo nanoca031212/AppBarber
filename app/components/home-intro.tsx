@@ -27,7 +27,7 @@ const HomeIntro = () => {
   }, []);
 
   return (
-    <div className="hidden lg:flex lg:flex-col lg:gap-6">
+    <div className="hidden h-[220px] py-16  lg:flex lg:flex-col lg:gap-6">
       <div>
         <h1 className="text-2xl font-bold text-black">
           {user ? `Olá, ${user.name}!` : "Olá, Faça seu login!"}

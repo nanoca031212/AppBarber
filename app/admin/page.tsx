@@ -41,6 +41,7 @@ import {
   Bell,
   Gift,
   Star,
+  Store,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -3235,7 +3236,11 @@ const whatsappSections: Array<{
     label: "Conexões",
     icon: <QrCode className="w-4 h-4" />,
   },
-  { value: "equipe", label: "Equipe", icon: <UserCog className="w-4 h-4" /> },
+  {
+    value: "equipe",
+    label: "Configurações de Equipe",
+    icon: <UserCog className="w-4 h-4" />,
+  },
   {
     value: "templates",
     label: "Templates",
@@ -3249,6 +3254,7 @@ const whatsappSections: Array<{
 ];
 
 type WhatsappStatusResponse = {
+  started: boolean;
   status: "connecting" | "open" | "close";
   hasQr: boolean;
   phone: string | null;
@@ -3256,6 +3262,7 @@ type WhatsappStatusResponse = {
 };
 
 const DEFAULT_WHATSAPP_STATUS: WhatsappStatusResponse = {
+  started: false,
   status: "close",
   hasQr: false,
   phone: null,
@@ -3267,11 +3274,68 @@ function formatWhatsappPhone(phone: string) {
   return `+${digits.slice(0, 2)} ${digits.slice(2)}`;
 }
 
+// Cada barbeiro conecta seu próprio número — uma instância do WhatsApp por
+// barbeiro, cada uma com seu ciclo de conectar/QR/desconectar independente.
 function WhatsappConexoes() {
+  const { barbers } = useStore();
+  const realBarbers = barbers.filter((b) => !b.id.startsWith("default-"));
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-sm text-[#656565]">
+        Conecte o WhatsApp principal da barbearia e o de cada barbeiro da
+        equipe.
+      </p>
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:gap-4">
+        <WhatsappInstanceCard
+          instanceId="barbearia"
+          name="Barbearia"
+          icon={
+            <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center shrink-0">
+              <Store className="w-4 h-4" />
+            </div>
+          }
+        />
+        {realBarbers.map((b) => (
+          <WhatsappInstanceCard
+            key={b.id}
+            instanceId={b.id}
+            name={b.name}
+            icon={
+              <Avatar
+                initials={b.initials}
+                src={b.photo}
+                position={b.photoPosition}
+                size="sm"
+              />
+            }
+          />
+        ))}
+      </div>
+      {realBarbers.length === 0 && (
+        <p className="text-center text-[#656565] py-2">
+          Cadastre um barbeiro em Config para conectar o WhatsApp dele
+          também.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function WhatsappInstanceCard({
+  instanceId,
+  name,
+  icon,
+}: {
+  instanceId: string;
+  name: string;
+  icon: React.ReactNode;
+}) {
   const [data, setData] = useState<WhatsappStatusResponse>(
     DEFAULT_WHATSAPP_STATUS,
   );
   const [qrTick, setQrTick] = useState(0);
+  const [connecting, setConnecting] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
@@ -3279,7 +3343,9 @@ function WhatsappConexoes() {
 
     async function poll() {
       try {
-        const res = await fetch("/api/whatsapp/status", { cache: "no-store" });
+        const res = await fetch(`/api/whatsapp/${instanceId}/status`, {
+          cache: "no-store",
+        });
         const json: WhatsappStatusResponse = await res.json();
         if (cancelled) return;
         setData(json);
@@ -3295,12 +3361,20 @@ function WhatsappConexoes() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, []);
+  }, [instanceId]);
+
+  async function handleConnect() {
+    setConnecting(true);
+    try {
+      await fetch(`/api/whatsapp/${instanceId}/connect`, { method: "POST" });
+    } catch {}
+    setConnecting(false);
+  }
 
   async function handleLogout() {
     setLoggingOut(true);
     try {
-      await fetch("/api/whatsapp/logout", { method: "POST" });
+      await fetch(`/api/whatsapp/${instanceId}/logout`, { method: "POST" });
     } catch {}
     setLoggingOut(false);
   }
@@ -3308,57 +3382,76 @@ function WhatsappConexoes() {
   const connected = data.status === "open";
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-5 flex flex-col items-center gap-3 text-center">
-        <div
-          className={[
-            "w-14 h-14 rounded-full flex items-center justify-center border-2",
-            connected
-              ? "bg-emerald-50 border-emerald-200"
-              : "bg-white border-[#F1f1f1]",
-          ].join(" ")}
-        >
-          <Smartphone
-            className={`w-6 h-6 ${connected ? "text-emerald-600" : "text-[#656565]"}`}
-          />
-        </div>
-        <div>
-          <p className="font-bold">
-            {data.offline
-              ? "Não foi possível verificar a conexão"
-              : connected
-                ? "WhatsApp conectado"
-                : "WhatsApp desconectado"}
-          </p>
-          <p className="text-sm text-[#656565]">
-            {data.offline
-              ? "Tente recarregar a página em instantes"
-              : connected
-                ? data.phone
-                  ? formatWhatsappPhone(data.phone)
-                  : "Número conectado"
-                : "Escaneie o QR code abaixo para conectar"}
-          </p>
-        </div>
-        {connected && (
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={loggingOut}
-            className="rounded-full border-2 border-[#F1f1f1] bg-white px-5 py-2.5 text-sm font-semibold text-red-500 disabled:opacity-60"
-          >
-            {loggingOut ? "Desconectando..." : "Desconectar"}
-          </button>
-        )}
+    <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-5 flex flex-col items-center gap-3 text-center">
+      <div className="flex items-center gap-2">
+        {icon}
+        <p className="font-bold text-sm">{name}</p>
       </div>
 
-      {!connected && !data.offline && (
-        <div className="rounded-xl border-2 border-dashed border-[#F1f1f1] bg-white p-6 flex flex-col items-center gap-3 text-center">
+      <div
+        className={[
+          "w-14 h-14 rounded-full flex items-center justify-center border-2",
+          connected
+            ? "bg-emerald-50 border-emerald-200"
+            : "bg-white border-[#F1f1f1]",
+        ].join(" ")}
+      >
+        <Smartphone
+          className={`w-6 h-6 ${connected ? "text-emerald-600" : "text-[#656565]"}`}
+        />
+      </div>
+      <div>
+        <p className="font-bold">
+          {data.offline
+            ? "Não foi possível verificar a conexão"
+            : connected
+              ? "WhatsApp conectado"
+              : data.started
+                ? "WhatsApp desconectado"
+                : "Ainda não conectado"}
+        </p>
+        <p className="text-sm text-[#656565]">
+          {data.offline
+            ? "Tente recarregar a página em instantes"
+            : connected
+              ? data.phone
+                ? formatWhatsappPhone(data.phone)
+                : "Número conectado"
+              : data.started
+                ? "Escaneie o QR code abaixo para conectar"
+                : `Conecte um número exclusivo para ${name}`}
+        </p>
+      </div>
+
+      {connected && (
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className="rounded-full border-2 border-[#F1f1f1] bg-white px-5 py-2.5 text-sm font-semibold text-red-500 disabled:opacity-60"
+        >
+          {loggingOut ? "Desconectando..." : "Desconectar"}
+        </button>
+      )}
+
+      {!data.started && !connected && !data.offline && (
+        <button
+          type="button"
+          onClick={handleConnect}
+          disabled={connecting}
+          className="rounded-full bg-black text-white px-5 py-2.5 text-sm font-semibold disabled:opacity-60"
+        >
+          {connecting ? "Iniciando..." : "Conectar"}
+        </button>
+      )}
+
+      {data.started && !connected && !data.offline && (
+        <div className="rounded-xl border-2 border-dashed border-[#F1f1f1] bg-white p-6 flex flex-col items-center gap-3 text-center w-full">
           {data.hasQr ? (
             <img
               key={qrTick}
-              src={`/api/whatsapp/qr?t=${qrTick}`}
-              alt="QR code do WhatsApp"
+              src={`/api/whatsapp/${instanceId}/qr?t=${qrTick}`}
+              alt={`QR code do WhatsApp de ${name}`}
               className="w-48 h-48 rounded-lg border-2 border-[#F1f1f1]"
             />
           ) : (
@@ -3367,18 +3460,18 @@ function WhatsappConexoes() {
             </div>
           )}
           <p className="text-xs text-[#656565] max-w-[240px]">
-            Abra o WhatsApp no celular da barbearia, toque em Aparelhos
+            Abra o WhatsApp no celular de {name}, toque em Aparelhos
             conectados e escaneie o código para conectar
           </p>
         </div>
       )}
 
       {connected && (
-        <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex items-center gap-3">
+        <div className="rounded-xl border-2 border-[#F1f1f1] bg-white p-4 flex items-center gap-3 w-full">
           <div className="w-9 h-9 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 text-left">
             <p className="font-semibold text-sm">Sessão ativa</p>
             <p className="text-xs text-[#656565]">
               Recebendo e enviando mensagens automaticamente
@@ -3390,118 +3483,62 @@ function WhatsappConexoes() {
   );
 }
 
-type EquipeWhatsappConfig = {
-  telefone: string;
-  recebeNovoAgendamento: boolean;
-  recebeCancelamento: boolean;
-};
-
-const DEFAULT_EQUIPE_CONFIG: EquipeWhatsappConfig = {
-  telefone: "",
-  recebeNovoAgendamento: true,
-  recebeCancelamento: true,
-};
-
 function WhatsappEquipe() {
-  const { barbers } = useStore();
-  const [config, setConfig] = useState<Record<string, EquipeWhatsappConfig>>(
-    {},
-  );
-
-  function getConfig(id: string): EquipeWhatsappConfig {
-    return config[id] ?? DEFAULT_EQUIPE_CONFIG;
-  }
-
-  function updateConfig(id: string, patch: Partial<EquipeWhatsappConfig>) {
-    setConfig((prev) => ({
-      ...prev,
-      [id]: { ...getConfig(id), ...patch },
-    }));
-  }
+  const [catalogoAtivo, setCatalogoAtivo] = useState(true);
+  const [agendamentoAtivo, setAgendamentoAtivo] = useState(true);
 
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-[#656565]">
-        Defina o número de WhatsApp de cada barbeiro e quais avisos eles
-        recebem automaticamente.
+        Configure o que o WhatsApp responde automaticamente aos clientes.
       </p>
-      {barbers.length === 0 && (
-        <p className="text-center text-[#656565] py-8">
-          Nenhum barbeiro cadastrado ainda.
-        </p>
-      )}
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
-        {barbers.map((b) => {
-          const cfg = getConfig(b.id);
-          return (
-            <div
-              key={b.id}
-              className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-3"
-            >
-              <div className="flex items-center gap-3">
-                <Avatar
-                  initials={b.initials}
-                  src={b.photo}
-                  position={b.photoPosition}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm truncate">{b.name}</p>
-                  <p className="text-xs text-[#656565] truncate">Barbeiro</p>
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-[#656565] uppercase block pb-1">
-                  WhatsApp
-                </label>
-                <input
-                  type="tel"
-                  value={cfg.telefone}
-                  onChange={(e) =>
-                    updateConfig(b.id, { telefone: e.target.value })
-                  }
-                  placeholder="(11) 91234-5678"
-                  className="w-full rounded-full border-2 border-[#F1f1f1] bg-white px-4 py-2 text-sm focus:outline-none focus:border-black"
-                />
-              </div>
-              <div className="flex flex-col gap-2 pt-1 border-t border-[#F1f1f1]">
-                <div className="flex items-center justify-between pt-2">
-                  <p className="text-sm font-semibold">Novo agendamento</p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateConfig(b.id, {
-                        recebeNovoAgendamento: !cfg.recebeNovoAgendamento,
-                      })
-                    }
-                  >
-                    {cfg.recebeNovoAgendamento ? (
-                      <ToggleRight className="w-6 h-6 text-black" />
-                    ) : (
-                      <ToggleLeft className="w-6 h-6 text-[#656565]" />
-                    )}
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold">Cancelamento</p>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateConfig(b.id, {
-                        recebeCancelamento: !cfg.recebeCancelamento,
-                      })
-                    }
-                  >
-                    {cfg.recebeCancelamento ? (
-                      <ToggleRight className="w-6 h-6 text-black" />
-                    ) : (
-                      <ToggleLeft className="w-6 h-6 text-[#656565]" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+
+      <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-white border-2 border-[#F1f1f1] flex items-center justify-center shrink-0">
+          <FileText className="w-4 h-4 text-[#656565]" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm">Catálogo de serviços</p>
+          <p className="text-xs text-[#656565]">
+            Envia a lista de serviços e preços quando o cliente pedir,
+            usando o template &quot;Catálogo&quot;
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCatalogoAtivo((v) => !v)}
+          className="shrink-0"
+        >
+          {catalogoAtivo ? (
+            <ToggleRight className="w-7 h-7 text-black" />
+          ) : (
+            <ToggleLeft className="w-7 h-7 text-[#656565]" />
+          )}
+        </button>
+      </div>
+
+      <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-white border-2 border-[#F1f1f1] flex items-center justify-center shrink-0">
+          <CalendarDays className="w-4 h-4 text-[#656565]" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm">Agendamento via WhatsApp</p>
+          <p className="text-xs text-[#656565]">
+            Envia o link de agendamento para o cliente marcar o horário
+            direto pelo chat, usando o template &quot;Agendamento&quot;
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setAgendamentoAtivo((v) => !v)}
+          className="shrink-0"
+        >
+          {agendamentoAtivo ? (
+            <ToggleRight className="w-7 h-7 text-black" />
+          ) : (
+            <ToggleLeft className="w-7 h-7 text-[#656565]" />
+          )}
+        </button>
       </div>
     </div>
   );

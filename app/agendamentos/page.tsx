@@ -88,7 +88,7 @@ export default function AgendamentosPage() {
       await fetch(`/api/reservas/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "CANCELADO" }),
+        body: JSON.stringify({ status: "CANCELADO", canceladoPor: "cliente" }),
       });
       setAgendamentos((prev) =>
         prev.map((ag) => (ag.id === id ? { ...ag, status: "CANCELADO" } : ag)),

@@ -1,35 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import { randomUUID } from "crypto";
+import { prisma } from "@/lib/prisma";
+import { createCheckout } from "@/lib/asaas";
+
+function withRef(url: string, ref: string) {
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}session_id=${ref}`;
+}
+
+function tomorrow() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
 
 export async function POST(req: NextRequest) {
-  const stripe = new Stripe(process.env.NEXT_PUBLIC_STRIPE_SECRET_KEY!);
   try {
     const { successUrl, cancelUrl } = await req.json();
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: [
+    const ref = randomUUID();
+    await prisma.asaasCheckout.create({
+      data: { externalRef: ref, tipo: "ASSINATURA" },
+    });
+
+    const checkout = await createCheckout({
+      billingTypes: ["CREDIT_CARD"],
+      chargeTypes: ["RECURRENT"],
+      items: [
         {
-          price_data: {
-            currency: "brl",
-            product_data: {
-              name: "Assinatura Mensal",
-              description: "3 cortes por semana",
-            },
-            unit_amount: 9990,
-            recurring: { interval: "month" },
-          },
+          name: "Assinatura Mensal",
+          description: "3 cortes por semana",
+          value: 99.9,
           quantity: 1,
         },
       ],
-      mode: "subscription",
-      phone_number_collection: { enabled: true },
-      success_url: successUrl,
-      cancel_url: cancelUrl,
+      subscription: { cycle: "MONTHLY", nextDueDate: tomorrow() },
+      externalReference: ref,
+      callback: {
+        successUrl: withRef(successUrl, ref),
+        cancelUrl,
+      },
     });
 
-    return NextResponse.json({ url: session.url });
+    await prisma.asaasCheckout.update({
+      where: { externalRef: ref },
+      data: { checkoutId: checkout.id },
+    });
+
+    return NextResponse.json({ url: checkout.link });
   } catch (err) {
+    console.error("[assinatura-checkout] Falha ao criar checkout:", err);
     const message = err instanceof Error ? err.message : "Erro interno";
     return NextResponse.json({ error: message }, { status: 500 });
   }

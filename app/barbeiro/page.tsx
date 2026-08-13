@@ -357,16 +357,13 @@ const BarbeiroContent = () => {
         barberName: barber?.name ?? "Barbeiro",
         date,
         time: selectedSlot ?? "",
-        successUrl: user
-          ? `${window.location.origin}/agendamentos?booked=1`
-          : `${window.location.origin}/cadastro?session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl: window.location.href,
+        clienteId: user?.id ?? null,
       }),
     });
 
-    const { url } = await res.json();
+    const { ref } = await res.json();
     setFinalizando(false);
-    if (url) window.location.href = url;
+    if (ref) window.location.href = `/checkout?ref=${ref}`;
   }
 
   const tabClassName = (tab: ActiveTab) =>

@@ -11,7 +11,7 @@ function CadastroForm() {
   const { user, setUser } = useStore();
 
   useEffect(() => {
-    // Se já logado e não veio do Stripe, manda pra agendamentos
+    // Se já logado e não veio do checkout de pagamento, manda pra agendamentos
     if (user && !searchParams.get("session_id")) {
       router.replace("/agendamentos");
     }

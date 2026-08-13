@@ -1,0 +1,15 @@
+Confirmo: é só um problema de teste local mesmo, em produção com 
+domínio https real vai funcionar normalmente.
+
+Por agora, vamos com a solução mais rápida: use uma URL https 
+temporária/placeholder como fallback apenas quando estivermos em 
+ambiente de desenvolvimento (ex: baseado em process.env.NODE_ENV), 
+para successUrl e cancelUrl, só para conseguirmos testar se o 
+checkout é criado com sucesso e pegar o link de pagamento.
+
+Deixe um comentário // TODO: configurar ngrok ou domínio de staging 
+para testar o fluxo de redirecionamento completo, quando formos 
+testar webhooks de verdade.
+
+Teste de novo e me mostre a resposta completa, especialmente a URL 
+do checkout gerada.

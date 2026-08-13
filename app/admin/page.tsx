@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useStore } from "@/app/context/store";
 import {
@@ -11,6 +11,7 @@ import {
   Search,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   TrendingUp,
   Clock,
   CheckCircle2,
@@ -42,6 +43,7 @@ import {
   Gift,
   Star,
   Store,
+  Sparkles,
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -447,6 +449,7 @@ const monthLabels = [
 
 function Agenda() {
   const today = useMemo(() => startOfDay(new Date()), []);
+  const { barbers } = useStore();
   const [reservas, setReservas] = useState<ReservaApi[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"semana" | "mes">("semana");
@@ -458,6 +461,8 @@ function Agenda() {
   const [filterStatus, setFilterStatus] = useState<AppointmentStatus | "todos">(
     "todos",
   );
+  const [sendingMsg, setSendingMsg] = useState<string | null>(null);
+  const [msgFeedback, setMsgFeedback] = useState<Record<string, "ok" | "err">>({});
 
   useEffect(() => {
     fetch("/api/reservas")
@@ -517,9 +522,34 @@ function Agenda() {
       await fetch(`/api/reservas/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({
+          status,
+          ...(status === "CANCELADO" ? { canceladoPor: "barbearia" } : {}),
+        }),
       });
     } catch {}
+  }
+
+  async function enviarMensagem(reservaId: string, templateId: string) {
+    const remetente = barbers[0];
+    if (!remetente) return;
+    setSendingMsg(`${reservaId}-${templateId}`);
+    try {
+      const res = await fetch("/api/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reservaId, templateId, barbeiroId: remetente.id }),
+      });
+      setMsgFeedback((prev) => ({ ...prev, [reservaId]: res.ok ? "ok" : "err" }));
+      setTimeout(
+        () => setMsgFeedback((prev) => { const n = { ...prev }; delete n[reservaId]; return n; }),
+        3000,
+      );
+    } catch {
+      setMsgFeedback((prev) => ({ ...prev, [reservaId]: "err" }));
+    } finally {
+      setSendingMsg(null);
+    }
   }
 
   function selectDay(d: Date) {
@@ -777,20 +807,46 @@ function Agenda() {
                   <p className="font-bold shrink-0">{formatPrice(apt.total)}</p>
                 </div>
                 {(status === "confirmado" || status === "pendente") && (
-                  <div className="flex gap-2 pt-3 border-t border-[#F1f1f1] mt-auto">
+                  <div className="flex flex-col gap-2 pt-3 border-t border-[#F1f1f1] mt-auto">
+                    <div className="flex gap-2">
+                      {status === "pendente" && (
+                        <button
+                          type="button"
+                          onClick={() => updateStatus(apt.id, "CONFIRMADO")}
+                          className="flex-1 rounded-full border-2 border-black bg-white py-2 text-sm font-semibold text-black"
+                        >
+                          Confirmar
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => updateStatus(apt.id, "CANCELADO")}
+                        className="flex-1 rounded-full border-2 border-[#F1f1f1] bg-white py-2 text-sm font-semibold text-red-500"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateStatus(apt.id, "CONCLUIDO")}
+                        className="flex-1 rounded-full bg-black text-white py-2 text-sm font-semibold"
+                      >
+                        Concluir
+                      </button>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => updateStatus(apt.id, "CANCELADO")}
-                      className="flex-1 rounded-full border-2 border-[#F1f1f1] bg-white py-2 text-sm font-semibold text-red-500"
+                      disabled={sendingMsg === `${apt.id}-confirmacao`}
+                      onClick={() => enviarMensagem(apt.id, "confirmacao")}
+                      className="w-full rounded-full border-2 border-[#F1f1f1] bg-white py-2 text-sm font-semibold text-[#25D366] disabled:opacity-50 flex items-center justify-center gap-1.5"
                     >
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateStatus(apt.id, "CONCLUIDO")}
-                      className="flex-1 rounded-full bg-black text-white py-2 text-sm font-semibold"
-                    >
-                      Concluir
+                      <MessageCircle className="w-4 h-4" />
+                      {sendingMsg === `${apt.id}-confirmacao`
+                        ? "Enviando..."
+                        : msgFeedback[apt.id] === "ok"
+                          ? "✓ Mensagem enviada"
+                          : msgFeedback[apt.id] === "err"
+                            ? "✗ Falha ao enviar"
+                            : "Enviar confirmação WhatsApp"}
                     </button>
                   </div>
                 )}
@@ -3337,6 +3393,11 @@ function WhatsappInstanceCard({
   const [qrTick, setQrTick] = useState(0);
   const [connecting, setConnecting] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [connectMode, setConnectMode] = useState<"qr" | "phone">("qr");
+  const [phoneInput, setPhoneInput] = useState("");
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [pairingLoading, setPairingLoading] = useState(false);
+  const [pairingError, setPairingError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -3350,6 +3411,7 @@ function WhatsappInstanceCard({
         if (cancelled) return;
         setData(json);
         setQrTick((t) => t + 1);
+        if (json.status === "open") setPairingCode(null);
       } catch {
         if (!cancelled) setData({ ...DEFAULT_WHATSAPP_STATUS, offline: true });
       }
@@ -3373,10 +3435,34 @@ function WhatsappInstanceCard({
 
   async function handleLogout() {
     setLoggingOut(true);
+    setPairingCode(null);
     try {
       await fetch(`/api/whatsapp/${instanceId}/logout`, { method: "POST" });
     } catch {}
     setLoggingOut(false);
+  }
+
+  async function handlePairingCode() {
+    if (!phoneInput.trim()) return;
+    setPairingLoading(true);
+    setPairingError(null);
+    setPairingCode(null);
+    try {
+      const res = await fetch(`/api/whatsapp/${instanceId}/pairing`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telefone: phoneInput }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setPairingError(json.detail ?? json.error ?? "Erro ao gerar código");
+      } else {
+        setPairingCode(json.code);
+      }
+    } catch {
+      setPairingError("Erro de conexão");
+    }
+    setPairingLoading(false);
   }
 
   const connected = data.status === "open";
@@ -3446,23 +3532,79 @@ function WhatsappInstanceCard({
       )}
 
       {data.started && !connected && !data.offline && (
-        <div className="rounded-xl border-2 border-dashed border-[#F1f1f1] bg-white p-6 flex flex-col items-center gap-3 text-center w-full">
-          {data.hasQr ? (
-            <img
-              key={qrTick}
-              src={`/api/whatsapp/${instanceId}/qr?t=${qrTick}`}
-              alt={`QR code do WhatsApp de ${name}`}
-              className="w-48 h-48 rounded-lg border-2 border-[#F1f1f1]"
-            />
-          ) : (
-            <div className="w-48 h-48 rounded-lg bg-[#FAFAFA] border-2 border-[#F1f1f1] flex items-center justify-center">
-              <Loader2 className="w-8 h-8 text-[#656565] animate-spin" />
+        <div className="rounded-xl border-2 border-dashed border-[#F1f1f1] bg-white p-4 flex flex-col items-center gap-3 text-center w-full">
+          {/* Toggle QR / Número */}
+          <div className="flex gap-1 bg-[#F1f1f1] rounded-full p-1 w-full">
+            {(["qr", "phone"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => { setConnectMode(m); setPairingCode(null); setPairingError(null); }}
+                className={[
+                  "flex-1 rounded-full py-1.5 text-xs font-semibold transition-colors",
+                  connectMode === m ? "bg-white text-black shadow-sm" : "text-[#656565]",
+                ].join(" ")}
+              >
+                {m === "qr" ? "QR Code" : "Número"}
+              </button>
+            ))}
+          </div>
+
+          {connectMode === "qr" && (
+            <>
+              {data.hasQr ? (
+                <img
+                  key={qrTick}
+                  src={`/api/whatsapp/${instanceId}/qr?t=${qrTick}`}
+                  alt={`QR code do WhatsApp de ${name}`}
+                  className="w-48 h-48 rounded-lg border-2 border-[#F1f1f1]"
+                />
+              ) : (
+                <div className="w-48 h-48 rounded-lg bg-[#FAFAFA] border-2 border-[#F1f1f1] flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-[#656565] animate-spin" />
+                </div>
+              )}
+              <p className="text-xs text-[#656565] max-w-[240px]">
+                Abra o WhatsApp no celular de {name}, toque em Aparelhos
+                conectados e escaneie o código para conectar
+              </p>
+            </>
+          )}
+
+          {connectMode === "phone" && (
+            <div className="flex flex-col gap-3 w-full">
+              <p className="text-xs text-[#656565]">
+                Digite o número do WhatsApp com DDI e DDD (ex: 5511999999999)
+              </p>
+              <input
+                type="tel"
+                placeholder="5511999999999"
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, ""))}
+                className="w-full rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] px-4 py-3 text-sm focus:outline-none focus:border-black"
+              />
+              <button
+                type="button"
+                onClick={handlePairingCode}
+                disabled={pairingLoading || !phoneInput.trim()}
+                className="w-full rounded-full bg-black text-white py-2.5 text-sm font-semibold disabled:opacity-50"
+              >
+                {pairingLoading ? "Gerando..." : "Gerar código"}
+              </button>
+              {pairingError && (
+                <p className="text-xs text-red-500 text-center">{pairingError}</p>
+              )}
+              {pairingCode && (
+                <div className="rounded-xl bg-[#F0FFF4] border border-[#BBF7D0] p-4 flex flex-col items-center gap-1">
+                  <p className="text-xs text-[#166534] font-medium">Código de vinculação</p>
+                  <p className="text-2xl font-bold tracking-[0.2em] text-[#166534]">{pairingCode}</p>
+                  <p className="text-xs text-[#166534] text-center mt-1">
+                    No WhatsApp, vá em Aparelhos conectados → Conectar com número de telefone e insira o código acima
+                  </p>
+                </div>
+              )}
             </div>
           )}
-          <p className="text-xs text-[#656565] max-w-[240px]">
-            Abra o WhatsApp no celular de {name}, toque em Aparelhos
-            conectados e escaneie o código para conectar
-          </p>
         </div>
       )}
 
@@ -3549,13 +3691,26 @@ type WhatsappTemplate = {
   titulo: string;
   descricao: string;
   mensagem: string;
+  gatilho?: string;
+  custom?: boolean;
 };
+
+const GATILHOS: Array<{ value: string; label: string; icon: string; descricao: string }> = [
+  { value: "agendamento_criado",    label: "Novo agendamento",        icon: "📅", descricao: "Bot envia automaticamente quando o cliente agenda um horário" },
+  { value: "agendamento_cancelado", label: "Agendamento cancelado",   icon: "❌", descricao: "Bot envia automaticamente quando um agendamento é cancelado"  },
+  { value: "agendamento_concluido", label: "Agendamento concluído",   icon: "✅", descricao: "Bot envia automaticamente quando o serviço é concluído"       },
+  { value: "lembrete_24h",          label: "Lembrete 24h antes",      icon: "⏰", descricao: "Bot envia automaticamente 24h antes do horário marcado"       },
+  { value: "pagamento_confirmado",  label: "Pagamento confirmado",    icon: "💳", descricao: "Bot envia automaticamente quando o pagamento é aprovado"      },
+  { value: "aniversario",           label: "Aniversário do cliente",  icon: "🎂", descricao: "Bot envia automaticamente no aniversário do cliente"          },
+  { value: "novo_cliente",          label: "Novo cliente cadastrado", icon: "👤", descricao: "Bot envia automaticamente quando um novo cliente se cadastra" },
+];
 
 const DEFAULT_WHATSAPP_TEMPLATES: WhatsappTemplate[] = [
   {
     id: "confirmacao",
     titulo: "Confirmação de agendamento",
     descricao: "Enviada assim que o cliente agenda um horário",
+    gatilho: "agendamento_criado",
     mensagem:
       "Olá {{cliente}}! Seu horário na {{barbearia}} foi confirmado para {{data}} às {{horario}}. Até lá! ✂️",
   },
@@ -3563,6 +3718,7 @@ const DEFAULT_WHATSAPP_TEMPLATES: WhatsappTemplate[] = [
     id: "lembrete",
     titulo: "Lembrete 24h antes",
     descricao: "Enviada um dia antes do horário marcado",
+    gatilho: "lembrete_24h",
     mensagem:
       "Oi {{cliente}}, passando para lembrar do seu horário amanhã, {{data}} às {{horario}}, na {{barbearia}}.",
   },
@@ -3570,6 +3726,7 @@ const DEFAULT_WHATSAPP_TEMPLATES: WhatsappTemplate[] = [
     id: "cancelamento",
     titulo: "Cancelamento",
     descricao: "Enviada quando um agendamento é cancelado",
+    gatilho: "agendamento_cancelado",
     mensagem:
       "Olá {{cliente}}, seu horário do dia {{data}} às {{horario}} foi cancelado. Qualquer dúvida, chama a gente por aqui.",
   },
@@ -3577,6 +3734,7 @@ const DEFAULT_WHATSAPP_TEMPLATES: WhatsappTemplate[] = [
     id: "aniversario",
     titulo: "Aniversário",
     descricao: "Enviada no aniversário do cliente",
+    gatilho: "aniversario",
     mensagem:
       "Feliz aniversário, {{cliente}}! 🎉 Passe na {{barbearia}} essa semana e ganhe um desconto especial.",
   },
@@ -3584,6 +3742,7 @@ const DEFAULT_WHATSAPP_TEMPLATES: WhatsappTemplate[] = [
     id: "catalogo",
     titulo: "Catálogo",
     descricao: "Envia a lista de serviços e preços da barbearia",
+    gatilho: "novo_cliente",
     mensagem:
       "Olá {{cliente}}! Aqui está o catálogo de serviços da {{barbearia}} 💈 Dá uma olhada e me diz qual você quer agendar.",
   },
@@ -3591,13 +3750,15 @@ const DEFAULT_WHATSAPP_TEMPLATES: WhatsappTemplate[] = [
     id: "servico",
     titulo: "Serviço",
     descricao: "Enviada com os detalhes de um serviço específico",
+    gatilho: "agendamento_criado",
     mensagem:
       "O serviço {{servico}} na {{barbearia}} leva {{duracao}} e custa {{preco}}. Quer que eu agende um horário pra você?",
   },
   {
     id: "agendamento",
-    titulo: "Agendamento",
+    titulo: "Link de agendamento",
     descricao: "Enviada com o link para o cliente marcar um horário",
+    gatilho: "novo_cliente",
     mensagem:
       "Olá {{cliente}}! Para agendar seu horário na {{barbearia}}, é só acessar: {{link}}",
   },
@@ -3614,191 +3775,1569 @@ const TEMPLATE_VARIABLES = [
   "{{link}}",
 ];
 
-function WhatsappTemplates() {
-  const [templates, setTemplates] = useState(DEFAULT_WHATSAPP_TEMPLATES);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
+// ─── Bot Canvas (Obsidian-style) ───────────────────────────────────────────────
 
-  function startEdit(t: WhatsappTemplate) {
-    setDrafts((prev) => ({ ...prev, [t.id]: prev[t.id] ?? t.mensagem }));
-    setExpanded((prev) => (prev === t.id ? null : t.id));
+type BotConfig = {
+  ativo: boolean;
+  identidade: string;
+  contexto: string;
+  instrucoes: string;
+  restricoes: string;
+};
+
+type CanvasNodeDef = {
+  id: string;
+  label: string;
+  icon: string;
+  accent: string;
+  configKey?: keyof Omit<BotConfig, "ativo">;
+  placeholder?: string;
+  fixed?: boolean;
+  isOutput?: boolean;
+};
+
+const NODE_W = 300;
+
+const CANVAS_NODE_DEFS: CanvasNodeDef[] = [
+  {
+    id: "trigger",
+    label: "Trigger — Mensagem recebida",
+    icon: "⚡",
+    accent: "#6366f1",
+    fixed: true,
+  },
+  {
+    id: "identidade",
+    label: "Identidade",
+    icon: "🤖",
+    accent: "#8b5cf6",
+    configKey: "identidade",
+    placeholder:
+      "Ex: Você é o Barber, assistente da Barbearia do João. Tom amigável. Ajuda clientes a agendar e tirar dúvidas.",
+  },
+  {
+    id: "contexto",
+    label: "Contexto da barbearia",
+    icon: "🏪",
+    accent: "#3b82f6",
+    configKey: "contexto",
+    placeholder:
+      "Ex: Funcionamos de segunda a sábado, 9h–19h. Rua das Flores, 123. Corte R$35, Barba R$25, Combo R$55.",
+  },
+  {
+    id: "instrucoes",
+    label: "Instruções",
+    icon: "📋",
+    accent: "#10b981",
+    configKey: "instrucoes",
+    placeholder:
+      "Ex: Quando quiser agendar, envie: https://seusite.com. Pergunte o nome ao iniciar.",
+  },
+  {
+    id: "restricoes",
+    label: "Restrições",
+    icon: "🚫",
+    accent: "#ef4444",
+    configKey: "restricoes",
+    placeholder:
+      "Ex: Não ofereça descontos. Não agende fora do horário. Foque apenas na barbearia.",
+  },
+  {
+    id: "output",
+    label: "Resposta — Gemini IA",
+    icon: "✨",
+    accent: "#f59e0b",
+    fixed: true,
+    isOutput: true,
+  },
+];
+
+const DEFAULT_POSITIONS: Record<string, { x: number; y: number }> = {
+  trigger:    { x: 80, y: 40 },
+  identidade: { x: 80, y: 220 },
+  contexto:   { x: 80, y: 480 },
+  instrucoes: { x: 80, y: 740 },
+  restricoes: { x: 80, y: 1000 },
+  output:     { x: 80, y: 1240 },
+};
+
+const EDGES: [string, string][] = [
+  ["trigger", "identidade"],
+  ["identidade", "contexto"],
+  ["contexto", "instrucoes"],
+  ["instrucoes", "restricoes"],
+  ["restricoes", "output"],
+];
+
+function BotCanvas({
+  botConfig,
+  setBotConfig,
+  loading,
+  templates,
+}: {
+  botConfig: BotConfig;
+  setBotConfig: React.Dispatch<React.SetStateAction<BotConfig>>;
+  loading: boolean;
+  templates: WhatsappTemplate[];
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const netCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>(DEFAULT_POSITIONS);
+  const [viewport, setViewport] = useState({ x: 40, y: 30, zoom: 0.72 });
+  const nodeRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const dragRef = useRef<{
+    type: "node" | "canvas";
+    id?: string;
+    startMx: number;
+    startMy: number;
+    startX: number;
+    startY: number;
+  } | null>(null);
+  const [edges, setEdges] = useState<[string, string][]>([...EDGES]);
+  const [customNodes, setCustomNodes] = useState<Array<{ id: string; label: string; accent: string; content: string; templateId?: string }>>([]);
+  const [addPanel, setAddPanel] = useState(false);
+  const [addTab, setAddTab] = useState<"bloco" | "mensagem">("bloco");
+  const [newNodeForm, setNewNodeForm] = useState({ label: "", accent: "#6366f1", content: "" });
+  // WhatsApp bot connection state
+  const [waState, setWaState] = useState<"loading" | "open" | "connecting" | "close" | "error">("loading");
+  const [waQr, setWaQr] = useState<string | null>(null);
+  const [waConnecting, setWaConnecting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function checkStatus() {
+      try {
+        const res = await fetch("/api/bot/whatsapp");
+        const data = await res.json();
+        if (cancelled) return;
+        setWaState(data.state ?? "error");
+        setWaQr(data.qr ?? null);
+      } catch {
+        if (!cancelled) setWaState("error");
+      }
+    }
+    checkStatus();
+    const id = setInterval(checkStatus, 8000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  async function connectBotWa() {
+    setWaConnecting(true);
+    try {
+      const res = await fetch("/api/bot/whatsapp", { method: "POST" });
+      const data = await res.json();
+      setWaState(data.state ?? "connecting");
+      setWaQr(data.qr ?? null);
+    } finally {
+      setWaConnecting(false);
+    }
   }
 
-  function saveTemplate(id: string) {
-    setTemplates((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, mensagem: drafts[id] ?? t.mensagem } : t,
-      ),
-    );
-    setExpanded(null);
+  const connectRef = useRef<{ fromId: string; x1: number; y1: number } | null>(null);
+  const [connectLine, setConnectLine] = useState<{ x1: number; y1: number; mx: number; my: number } | null>(null);
+  const [hoveredEdge, setHoveredEdge] = useState<string | null>(null);
+
+  function onCanvasMouseDown(e: React.MouseEvent) {
+    if ((e.target as HTMLElement).closest("[data-node]")) return;
+    dragRef.current = {
+      type: "canvas",
+      startMx: e.clientX,
+      startMy: e.clientY,
+      startX: viewport.x,
+      startY: viewport.y,
+    };
+  }
+
+  function onNodeMouseDown(e: React.MouseEvent, id: string) {
+    e.stopPropagation();
+    if ((e.target as HTMLElement).closest("textarea,button,input")) return;
+    dragRef.current = {
+      type: "node",
+      id,
+      startMx: e.clientX,
+      startMy: e.clientY,
+      startX: positions[id]?.x ?? 0,
+      startY: positions[id]?.y ?? 0,
+    };
+  }
+
+  function onMouseMove(e: React.MouseEvent) {
+    if (connectRef.current) {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const mx = (e.clientX - rect.left - viewport.x) / viewport.zoom;
+      const my = (e.clientY - rect.top - viewport.y) / viewport.zoom;
+      setConnectLine((l) => l ? { ...l, mx, my } : null);
+      return;
+    }
+    const d = dragRef.current;
+    if (!d) return;
+    const dx = e.clientX - d.startMx;
+    const dy = e.clientY - d.startMy;
+    if (d.type === "canvas") {
+      setViewport((v) => ({ ...v, x: d.startX + dx, y: d.startY + dy }));
+    } else if (d.id) {
+      setPositions((p) => ({
+        ...p,
+        [d.id!]: { x: d.startX + dx / viewport.zoom, y: d.startY + dy / viewport.zoom },
+      }));
+    }
+  }
+
+  function onMouseUp(e: React.MouseEvent) {
+    if (connectRef.current) {
+      const portEl = (e.target as HTMLElement).closest("[data-port-in]") as HTMLElement | null;
+      if (portEl) {
+        const toId = portEl.dataset.portIn!;
+        const fromId = connectRef.current.fromId;
+        if (fromId !== toId) {
+          setEdges((prev) => {
+            const exists = prev.some(([a, b]) => a === fromId && b === toId);
+            return exists ? prev : [...prev, [fromId, toId]];
+          });
+        }
+      }
+      connectRef.current = null;
+      setConnectLine(null);
+      return;
+    }
+    dragRef.current = null;
+  }
+
+  function cancelDrag() {
+    dragRef.current = null;
+    connectRef.current = null;
+    setConnectLine(null);
+  }
+
+  function onPortMouseDown(e: React.MouseEvent, nodeId: string) {
+    e.stopPropagation();
+    const pos = positions[nodeId] ?? { x: 0, y: 0 };
+    const el = nodeRefs.current[nodeId];
+    const h = el?.offsetHeight ?? 80;
+    const x1 = pos.x + NODE_W / 2;
+    const y1 = pos.y + h;
+    connectRef.current = { fromId: nodeId, x1, y1 };
+    setConnectLine({ x1, y1, mx: x1, my: y1 });
+  }
+
+  function addCustomNode() {
+    if (!newNodeForm.label.trim()) return;
+    const id = `custom_${Date.now()}`;
+    const cx = (containerRef.current?.clientWidth ?? 600) / 2;
+    const cy = (containerRef.current?.clientHeight ?? 400) / 2;
+    setCustomNodes((prev) => [...prev, { id, label: newNodeForm.label, accent: newNodeForm.accent, content: newNodeForm.content }]);
+    setPositions((prev) => ({
+      ...prev,
+      [id]: { x: (cx - viewport.x) / viewport.zoom - NODE_W / 2, y: (cy - viewport.y) / viewport.zoom - 40 },
+    }));
+    setNewNodeForm({ label: "", accent: "#6366f1", content: "" });
+    setAddPanel(false);
+  }
+
+  function linkTemplate(tpl: WhatsappTemplate) {
+    const id = `tpl_${tpl.id}_${Date.now()}`;
+    const cx = (containerRef.current?.clientWidth ?? 600) / 2;
+    const cy = (containerRef.current?.clientHeight ?? 400) / 2;
+    const gatilho = GATILHOS.find((g) => g.value === tpl.gatilho);
+    setCustomNodes((prev) => [...prev, {
+      id,
+      label: tpl.titulo,
+      accent: "#10b981",
+      content: tpl.mensagem,
+      templateId: tpl.id,
+    }]);
+    setPositions((prev) => ({
+      ...prev,
+      [id]: { x: (cx - viewport.x) / viewport.zoom - NODE_W / 2, y: (cy - viewport.y) / viewport.zoom - 40 },
+    }));
+    setAddPanel(false);
+  }
+
+  function deleteCustomNode(id: string) {
+    setCustomNodes((prev) => prev.filter((n) => n.id !== id));
+    setPositions((prev) => { const p = { ...prev }; delete p[id]; return p; });
+    setEdges((prev) => prev.filter(([a, b]) => a !== id && b !== id));
+  }
+
+  function deleteEdge(fromId: string, toId: string) {
+    setEdges((prev) => prev.filter(([a, b]) => !(a === fromId && b === toId)));
+  }
+
+  function onWheel(e: React.WheelEvent) {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    setViewport((v) => ({
+      ...v,
+      zoom: Math.min(2, Math.max(0.25, v.zoom * factor)),
+    }));
+  }
+
+  function resetView() {
+    setViewport({ x: 40, y: 30, zoom: 0.72 });
+    setPositions(DEFAULT_POSITIONS);
+  }
+
+  // Animated particle network globe background
+  useEffect(() => {
+    const canvas = netCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const COLORS = ["#6366f1","#8b5cf6","#3b82f6","#10b981","#ef4444","#f59e0b","#ec4899","#14b8a6","#a1a1aa"];
+    const N = 110;
+    const RADIUS = 200;
+    const LINK_DIST = 95;
+
+    // Fibonacci sphere distribution
+    const pts: { phi: number; theta: number; color: string; size: number; speed: number }[] = [];
+    const golden = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < N; i++) {
+      const y = 1 - (i / (N - 1)) * 2;
+      const r = Math.sqrt(1 - y * y);
+      const phi = i * golden;
+      pts.push({
+        phi,
+        theta: Math.asin(Math.max(-1, Math.min(1, y))),
+        color: COLORS[i % COLORS.length],
+        size: 2 + Math.random() * 3.5,
+        speed: 0.00018 + Math.random() * 0.00012,
+      });
+    }
+
+    let angle = 0;
+    let animId: number;
+    let w = 0, h = 0;
+
+    function resize() {
+      const container = containerRef.current;
+      if (!container || !canvas) return;
+      w = container.clientWidth;
+      h = container.clientHeight;
+      canvas.width = w;
+      canvas.height = h;
+    }
+
+    function project(phi: number, theta: number) {
+      const x3 = Math.cos(theta) * Math.sin(phi + angle);
+      const y3 = Math.sin(theta);
+      const z3 = Math.cos(theta) * Math.cos(phi + angle);
+      const depth = (z3 + 1) / 2; // 0..1
+      return {
+        x: w / 2 + x3 * RADIUS,
+        y: h / 2 + y3 * RADIUS,
+        depth,
+        visible: z3 > -0.25,
+      };
+    }
+
+    function draw() {
+      if (!ctx || !canvas) return;
+      ctx.clearRect(0, 0, w, h);
+
+      const projected = pts.map((p) => ({ ...p, ...project(p.phi, p.theta) }));
+
+      // Draw links
+      for (let i = 0; i < projected.length; i++) {
+        if (!projected[i].visible) continue;
+        for (let j = i + 1; j < projected.length; j++) {
+          if (!projected[j].visible) continue;
+          const dx = projected[i].x - projected[j].x;
+          const dy = projected[i].y - projected[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < LINK_DIST) {
+            const alpha = (1 - dist / LINK_DIST) * 0.35 * ((projected[i].depth + projected[j].depth) / 2);
+            ctx.beginPath();
+            ctx.moveTo(projected[i].x, projected[i].y);
+            ctx.lineTo(projected[j].x, projected[j].y);
+            ctx.strokeStyle = `rgba(160,160,200,${alpha.toFixed(3)})`;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Draw dots
+      for (const p of projected) {
+        if (!p.visible) continue;
+        const sz = p.size * (0.5 + p.depth * 0.7);
+        const alpha = 0.4 + p.depth * 0.6;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, sz, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + Math.round(alpha * 255).toString(16).padStart(2, "0");
+        ctx.fill();
+      }
+
+      angle += 0.0025;
+      animId = requestAnimationFrame(draw);
+    }
+
+    resize();
+    draw();
+
+    const observer = new ResizeObserver(resize);
+    if (containerRef.current) observer.observe(containerRef.current);
+
+    return () => {
+      cancelAnimationFrame(animId);
+      observer.disconnect();
+    };
+  }, []);
+
+  // Build edges as SVG bezier paths
+  function buildEdgePath(fromId: string, toId: string) {
+    const from = positions[fromId];
+    const to = positions[toId];
+    if (!from || !to) return "";
+    const fromEl = nodeRefs.current[fromId];
+    const fromH = fromEl?.offsetHeight ?? 80;
+    const x1 = from.x + NODE_W / 2;
+    const y1 = from.y + fromH;
+    const x2 = to.x + NODE_W / 2;
+    const y2 = to.y;
+    const cy = (y1 + y2) / 2;
+    return `M ${x1} ${y1} C ${x1} ${cy}, ${x2} ${cy}, ${x2} ${y2}`;
+  }
+
+  function getEdgeMid(fromId: string, toId: string) {
+    const from = positions[fromId];
+    const to = positions[toId];
+    if (!from || !to) return null;
+    const fromEl = nodeRefs.current[fromId];
+    const fromH = fromEl?.offsetHeight ?? 80;
+    const x1 = from.x + NODE_W / 2;
+    const y1 = from.y + fromH;
+    const x2 = to.x + NODE_W / 2;
+    const y2 = to.y;
+    return { x: (x1 + x2) / 2, y: (y1 + y2) / 2 };
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-sm text-[#656565]">
-        Personalize as mensagens automáticas enviadas aos clientes.
-      </p>
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
-        {templates.map((t) => {
-          const isExpanded = expanded === t.id;
+    <div
+      ref={containerRef}
+      className="relative w-full rounded-2xl overflow-hidden select-none"
+      style={{ height: 560, background: "#111113", cursor: dragRef.current ? "grabbing" : "grab" }}
+      onMouseDown={onCanvasMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={cancelDrag}
+      onWheel={onWheel}
+    >
+      {/* Dot grid */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle, #2a2a2e 1.5px, transparent 1.5px)",
+          backgroundSize: "28px 28px",
+        }}
+      />
+
+      {/* Animated particle globe network */}
+      <canvas
+        ref={netCanvasRef}
+        className="absolute inset-0 pointer-events-none"
+        style={{ zIndex: 1, opacity: 0.75 }}
+      />
+
+      {/* Viewport transform */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          transformOrigin: "0 0",
+          transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+        }}
+      >
+        {/* SVG edges */}
+        <svg style={{ position: "absolute", inset: 0, overflow: "visible", pointerEvents: "none" }}>
+          <defs>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#3f3f46" />
+            </marker>
+            <marker id="arrow-hover" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#ef4444" />
+            </marker>
+          </defs>
+          {edges.map(([a, b]) => {
+            const key = `${a}-${b}`;
+            const hovered = hoveredEdge === key;
+            const mid = getEdgeMid(a, b);
+            return (
+              <g key={key} style={{ pointerEvents: "all" }}>
+                {/* fat invisible hit area */}
+                <path
+                  d={buildEdgePath(a, b)}
+                  fill="none"
+                  stroke="transparent"
+                  strokeWidth={14}
+                  style={{ cursor: "pointer" }}
+                  onMouseEnter={() => setHoveredEdge(key)}
+                  onMouseLeave={() => setHoveredEdge(null)}
+                  onClick={() => deleteEdge(a, b)}
+                />
+                {/* visual path */}
+                <path
+                  d={buildEdgePath(a, b)}
+                  fill="none"
+                  stroke={hovered ? "#ef4444" : "#3f3f46"}
+                  strokeWidth={hovered ? 2.5 : 2}
+                  strokeDasharray="6 4"
+                  markerEnd={hovered ? "url(#arrow-hover)" : "url(#arrow)"}
+                  style={{ pointerEvents: "none", transition: "stroke 0.15s" }}
+                />
+                {/* disconnect button at midpoint */}
+                {hovered && mid && (
+                  <g
+                    style={{ cursor: "pointer", pointerEvents: "all" }}
+                    onMouseEnter={() => setHoveredEdge(key)}
+                    onMouseLeave={() => setHoveredEdge(null)}
+                    onClick={() => deleteEdge(a, b)}
+                  >
+                    <circle cx={mid.x} cy={mid.y} r={10} fill="#18181b" stroke="#ef4444" strokeWidth={1.5} />
+                    <text x={mid.x} y={mid.y + 4} textAnchor="middle" fill="#ef4444" fontSize={12} fontWeight="bold" style={{ userSelect: "none" }}>×</text>
+                  </g>
+                )}
+              </g>
+            );
+          })}
+          {connectLine && (
+            <path
+              d={`M ${connectLine.x1} ${connectLine.y1} C ${connectLine.x1} ${(connectLine.y1 + connectLine.my) / 2}, ${connectLine.mx} ${(connectLine.y1 + connectLine.my) / 2}, ${connectLine.mx} ${connectLine.my}`}
+              fill="none"
+              stroke="#6366f1"
+              strokeWidth={2}
+              strokeDasharray="5 3"
+              opacity={0.8}
+            />
+          )}
+        </svg>
+
+        {/* Nodes — built-in */}
+        {CANVAS_NODE_DEFS.map((def) => {
+          const pos = positions[def.id] ?? { x: 0, y: 0 };
+          const val = def.configKey ? botConfig[def.configKey] : "";
           return (
             <div
-              key={t.id}
-              className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden"
+              key={def.id}
+              data-node={def.id}
+              ref={(el) => { nodeRefs.current[def.id] = el; }}
+              style={{ position: "absolute", left: pos.x, top: pos.y, width: NODE_W, cursor: "grab" }}
+              onMouseDown={(e) => onNodeMouseDown(e, def.id)}
             >
-              <button
-                type="button"
-                onClick={() => startEdit(t)}
-                className="w-full flex items-center gap-3 p-4 text-left"
-              >
-                <div className="w-9 h-9 rounded-lg bg-black flex items-center justify-center shrink-0">
-                  <FileText className="w-4 h-4 text-white" />
+              {/* Input port (top) */}
+              {def.id !== "trigger" && (
+                <div
+                  data-port-in={def.id}
+                  style={{
+                    position: "absolute", top: -7, left: "50%", transform: "translateX(-50%)",
+                    width: 14, height: 14, borderRadius: "50%",
+                    background: "#27272a", border: `2px solid ${def.accent}`,
+                    cursor: "crosshair", zIndex: 2,
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                />
+              )}
+              <div style={{ borderRadius: 14, overflow: "hidden", border: "1.5px solid #27272a" }}>
+                {/* Header */}
+                <div style={{ background: "#1c1c1f", borderBottom: `2px solid ${def.accent}`, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 16 }}>{def.icon}</span>
+                  <span style={{ color: "#e4e4e7", fontSize: 12, fontWeight: 600, flex: 1 }}>{def.label}</span>
+                  {def.id === "trigger" && (
+                    <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={() => setBotConfig((p) => ({ ...p, ativo: !p.ativo }))} style={{ flexShrink: 0, lineHeight: 0 }}>
+                      {botConfig.ativo ? <ToggleRight style={{ width: 26, height: 26, color: "#6366f1" }} /> : <ToggleLeft style={{ width: 26, height: 26, color: "#52525b" }} />}
+                    </button>
+                  )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm">{t.titulo}</p>
-                  <p className="text-xs text-[#656565] truncate">
-                    {t.descricao}
-                  </p>
-                </div>
-                <Pencil className="w-4 h-4 text-[#656565] shrink-0" />
-              </button>
 
-              {isExpanded && (
-                <div className="px-4 pb-4 border-t border-[#F1f1f1] pt-3 flex flex-col gap-3">
-                  <textarea
-                    value={drafts[t.id] ?? t.mensagem}
-                    onChange={(e) =>
-                      setDrafts((prev) => ({
-                        ...prev,
-                        [t.id]: e.target.value,
-                      }))
-                    }
-                    rows={4}
-                    className="w-full rounded-xl border-2 border-[#F1f1f1] bg-white px-4 py-3 text-sm focus:outline-none focus:border-black resize-none"
-                  />
-                  <div className="flex flex-wrap gap-1.5">
-                    {TEMPLATE_VARIABLES.map((v) => (
-                      <span
-                        key={v}
-                        className="rounded-full bg-white border border-[#F1f1f1] px-2 py-1 text-xs font-mono text-[#656565]"
-                      >
-                        {v}
+                {/* WhatsApp status (trigger only) */}
+                {def.id === "trigger" && (
+                  <div style={{ background: "#111113", borderBottom: "1px solid #27272a", padding: "10px 14px" }}>
+                    {/* Status row */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{
+                        width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                        background: waState === "open" ? "#22c55e" : waState === "connecting" ? "#f59e0b" : waState === "loading" ? "#52525b" : "#ef4444",
+                        boxShadow: waState === "open" ? "0 0 6px #22c55e" : waState === "connecting" ? "0 0 6px #f59e0b" : "none",
+                      }} />
+                      <span style={{ color: "#a1a1aa", fontSize: 11, flex: 1 }}>
+                        {waState === "open" ? "WhatsApp conectado"
+                          : waState === "connecting" ? "Aguardando leitura do QR..."
+                          : waState === "loading" ? "Verificando conexão..."
+                          : "WhatsApp desconectado"}
                       </span>
-                    ))}
+                      {waState !== "open" && waState !== "loading" && (
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={connectBotWa}
+                          disabled={waConnecting}
+                          style={{
+                            background: "#25d366", border: "none", borderRadius: 6,
+                            color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 8px",
+                            cursor: "pointer", opacity: waConnecting ? 0.6 : 1,
+                          }}
+                        >
+                          {waConnecting ? "..." : "Conectar"}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* QR Code */}
+                    {waQr && waState !== "open" && (
+                      <div style={{ marginTop: 10, textAlign: "center" }}>
+                        <p style={{ color: "#71717a", fontSize: 10, marginBottom: 6 }}>
+                          Escaneie com o WhatsApp da barbearia
+                        </p>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={waQr}
+                          alt="QR Code WhatsApp"
+                          style={{ width: 180, height: 180, borderRadius: 8, display: "block", margin: "0 auto" }}
+                          onMouseDown={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => saveTemplate(t.id)}
-                    className="w-full rounded-full bg-black text-white py-2.5 text-sm font-semibold"
-                  >
-                    Salvar
-                  </button>
-                </div>
+                )}
+
+                {/* Body */}
+                {def.configKey && !loading && (
+                  <div style={{ background: "#18181b", padding: "10px 14px" }}>
+                    <textarea value={val} placeholder={def.placeholder} rows={4} onMouseDown={(e) => e.stopPropagation()} onChange={(e) => setBotConfig((p) => ({ ...p, [def.configKey!]: e.target.value }))} style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#a1a1aa", fontSize: 12, lineHeight: 1.6, resize: "none", fontFamily: "inherit" }} />
+                  </div>
+                )}
+                {def.isOutput && (
+                  <div style={{ background: "#18181b", padding: "10px 14px", color: "#71717a", fontSize: 12 }}>
+                    Gera e envia a resposta via WhatsApp
+                  </div>
+                )}
+                {loading && def.configKey && (
+                  <div style={{ background: "#18181b", padding: "14px", display: "flex", justifyContent: "center" }}>
+                    <div style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid #3f3f46", borderTopColor: def.accent, animation: "spin 1s linear infinite" }} />
+                  </div>
+                )}
+              </div>
+              {/* Output port (bottom) */}
+              {!def.isOutput && (
+                <div
+                  style={{
+                    position: "absolute", bottom: -7, left: "50%", transform: "translateX(-50%)",
+                    width: 14, height: 14, borderRadius: "50%",
+                    background: def.accent, border: "2px solid #111113",
+                    cursor: "crosshair", zIndex: 2,
+                  }}
+                  onMouseDown={(e) => onPortMouseDown(e, def.id)}
+                />
               )}
             </div>
           );
         })}
+
+        {/* Nodes — custom */}
+        {customNodes.map((node) => {
+          const pos = positions[node.id] ?? { x: 0, y: 0 };
+          const linkedTpl = node.templateId ? templates.find((t) => t.id === node.templateId) : null;
+          const gatilho = linkedTpl ? GATILHOS.find((g) => g.value === linkedTpl.gatilho) : null;
+          return (
+            <div
+              key={node.id}
+              data-node={node.id}
+              ref={(el) => { nodeRefs.current[node.id] = el; }}
+              style={{ position: "absolute", left: pos.x, top: pos.y, width: NODE_W, cursor: "grab" }}
+              onMouseDown={(e) => onNodeMouseDown(e, node.id)}
+            >
+              {/* Input port */}
+              <div
+                data-port-in={node.id}
+                style={{
+                  position: "absolute", top: -7, left: "50%", transform: "translateX(-50%)",
+                  width: 14, height: 14, borderRadius: "50%",
+                  background: "#27272a", border: `2px solid ${node.accent}`,
+                  cursor: "crosshair", zIndex: 2,
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+              />
+              <div style={{ borderRadius: 14, overflow: "hidden", border: `1.5px solid ${node.accent}44` }}>
+                {/* Header */}
+                <div style={{ background: "#1c1c1f", borderBottom: `2px solid ${node.accent}`, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 14 }}>{gatilho ? gatilho.icon : "✦"}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: "#e4e4e7", fontSize: 12, fontWeight: 600 }}>{node.label}</div>
+                    {gatilho && (
+                      <div style={{ fontSize: 10, color: "#10b981", marginTop: 2 }}>⚡ {gatilho.label}</div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => deleteCustomNode(node.id)}
+                    style={{ background: "none", border: "none", color: "#52525b", cursor: "pointer", lineHeight: 1, padding: 0, fontSize: 14 }}
+                  >✕</button>
+                </div>
+                {/* Body */}
+                <div style={{ background: "#18181b", padding: "10px 14px" }}>
+                  {linkedTpl ? (
+                    <p style={{ color: "#71717a", fontSize: 12, lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>
+                      {linkedTpl.mensagem}
+                    </p>
+                  ) : (
+                    <textarea
+                      value={node.content}
+                      placeholder="Conteúdo do bloco..."
+                      rows={4}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onChange={(e) => setCustomNodes((prev) => prev.map((n) => n.id === node.id ? { ...n, content: e.target.value } : n))}
+                      style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: "#a1a1aa", fontSize: 12, lineHeight: 1.6, resize: "none", fontFamily: "inherit" }}
+                    />
+                  )}
+                </div>
+                {linkedTpl && (
+                  <div style={{ background: "#111113", padding: "6px 14px", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 10, color: "#52525b" }}>Vinculado ao template</span>
+                    <span style={{ fontSize: 10, color: "#10b981", fontWeight: 600 }}>{linkedTpl.titulo}</span>
+                  </div>
+                )}
+              </div>
+              {/* Output port */}
+              <div
+                style={{
+                  position: "absolute", bottom: -7, left: "50%", transform: "translateX(-50%)",
+                  width: 14, height: 14, borderRadius: "50%",
+                  background: node.accent, border: "2px solid #111113",
+                  cursor: "crosshair", zIndex: 2,
+                }}
+                onMouseDown={(e) => onPortMouseDown(e, node.id)}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Add node panel */}
+      {addPanel && (
+        <div
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{
+            position: "absolute", bottom: 54, right: 12, zIndex: 20,
+            background: "#1c1c1f", border: "1px solid #3f3f46", borderRadius: 14,
+            padding: 14, display: "flex", flexDirection: "column", gap: 10, width: 260,
+            boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+          }}
+        >
+          {/* Tabs */}
+          <div style={{ display: "flex", gap: 4, background: "#111113", borderRadius: 8, padding: 3 }}>
+            {(["bloco", "mensagem"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setAddTab(tab)}
+                style={{
+                  flex: 1, padding: "5px 0", borderRadius: 6, border: "none",
+                  background: addTab === tab ? "#2a2a2e" : "none",
+                  color: addTab === tab ? "#e4e4e7" : "#71717a",
+                  fontSize: 12, fontWeight: addTab === tab ? 600 : 400, cursor: "pointer",
+                }}
+              >
+                {tab === "bloco" ? "✦ Bloco" : "💬 Mensagem"}
+              </button>
+            ))}
+          </div>
+
+          {/* Bloco livre */}
+          {addTab === "bloco" && (
+            <>
+              <input
+                autoFocus
+                placeholder="Nome do bloco"
+                value={newNodeForm.label}
+                onChange={(e) => setNewNodeForm((p) => ({ ...p, label: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === "Enter") addCustomNode(); if (e.key === "Escape") setAddPanel(false); }}
+                style={{ background: "#111113", border: "1px solid #3f3f46", borderRadius: 7, padding: "6px 10px", color: "#e4e4e7", fontSize: 12, outline: "none" }}
+              />
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ color: "#71717a", fontSize: 11 }}>Cor</span>
+                {["#6366f1","#3b82f6","#10b981","#ef4444","#f59e0b","#ec4899","#14b8a6"].map((c) => (
+                  <div key={c} onClick={() => setNewNodeForm((p) => ({ ...p, accent: c }))} style={{ width: 16, height: 16, borderRadius: "50%", background: c, cursor: "pointer", outline: newNodeForm.accent === c ? `2px solid ${c}` : "none", outlineOffset: 2 }} />
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button type="button" onClick={() => setAddPanel(false)} style={{ flex: 1, background: "none", border: "1px solid #3f3f46", borderRadius: 7, color: "#71717a", fontSize: 12, padding: "5px 0", cursor: "pointer" }}>Cancelar</button>
+                <button type="button" onClick={addCustomNode} style={{ flex: 1, background: "#6366f1", border: "none", borderRadius: 7, color: "#fff", fontSize: 12, fontWeight: 600, padding: "5px 0", cursor: "pointer" }}>Criar</button>
+              </div>
+            </>
+          )}
+
+          {/* Vincular mensagem */}
+          {addTab === "mensagem" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 280, overflowY: "auto" }}>
+              {templates.length === 0 ? (
+                <p style={{ color: "#71717a", fontSize: 12, textAlign: "center", padding: "12px 0" }}>Nenhum template criado ainda</p>
+              ) : templates.map((tpl) => {
+                const gatilho = GATILHOS.find((g) => g.value === tpl.gatilho);
+                return (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => linkTemplate(tpl)}
+                    style={{
+                      background: "#18181b", border: "1px solid #27272a", borderRadius: 10,
+                      padding: "10px 12px", cursor: "pointer", textAlign: "left",
+                      display: "flex", flexDirection: "column", gap: 4,
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#10b981")}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#27272a")}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 14 }}>{gatilho?.icon ?? "💬"}</span>
+                      <span style={{ color: "#e4e4e7", fontSize: 12, fontWeight: 600, flex: 1 }}>{tpl.titulo}</span>
+                    </div>
+                    {gatilho && (
+                      <span style={{ fontSize: 10, color: "#10b981", background: "#052e16", borderRadius: 4, padding: "1px 6px", alignSelf: "flex-start" }}>
+                        ⚡ {gatilho.label}
+                      </span>
+                    )}
+                    <p style={{ color: "#71717a", fontSize: 11, lineHeight: 1.4, margin: 0, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                      {tpl.mensagem}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Toolbar */}
+      <div style={{ position: "absolute", bottom: 12, right: 12, display: "flex", gap: 6, zIndex: 10 }}>
+        <button
+          type="button"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={() => setAddPanel((p) => !p)}
+          style={{
+            height: 30, padding: "0 10px", borderRadius: 8,
+            background: addPanel ? "#4f46e5" : "#1c1c1f",
+            border: `1px solid ${addPanel ? "#6366f1" : "#27272a"}`,
+            color: addPanel ? "#fff" : "#a1a1aa", fontSize: 12, cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 5,
+          }}
+        >
+          <span style={{ fontSize: 14 }}>+</span> Novo card
+        </button>
+        {[
+          { label: "+", action: () => setViewport((v) => ({ ...v, zoom: Math.min(2, v.zoom * 1.2) })) },
+          { label: "−", action: () => setViewport((v) => ({ ...v, zoom: Math.max(0.25, v.zoom * 0.8) })) },
+          { label: "⌂", action: resetView },
+        ].map((btn) => (
+          <button
+            key={btn.label}
+            type="button"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={btn.action}
+            style={{
+              width: 30, height: 30, borderRadius: 8,
+              background: "#1c1c1f", border: "1px solid #27272a",
+              color: "#a1a1aa", fontSize: 14, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            {btn.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Status pill */}
+      <div
+        style={{
+          position: "absolute",
+          top: 12,
+          left: 12,
+          background: botConfig.ativo ? "#14532d" : "#27272a",
+          border: `1px solid ${botConfig.ativo ? "#16a34a" : "#3f3f46"}`,
+          borderRadius: 20,
+          padding: "3px 10px",
+          color: botConfig.ativo ? "#86efac" : "#71717a",
+          fontSize: 11,
+          fontWeight: 600,
+          display: "flex",
+          alignItems: "center",
+          gap: 5,
+        }}
+      >
+        <div
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: botConfig.ativo ? "#22c55e" : "#52525b",
+          }}
+        />
+        {botConfig.ativo ? "Bot ativo" : "Bot desativado"}
       </div>
     </div>
   );
 }
 
-type NotificationToggleId =
-  | "novoAgendamento"
-  | "lembrete24h"
-  | "confirmacao"
-  | "cancelamento"
-  | "aniversario"
-  | "pesquisaSatisfacao";
+function WhatsappTemplates() {
+  const [view, setView] = useState<"bot" | "mensagens">("bot");
 
-const NOTIFICATION_TOGGLES: Array<{
+  // ── Bot state ───────────────────────────────────────────────────────────────
+  const [botConfig, setBotConfig] = useState<BotConfig>({
+    ativo: false,
+    identidade: "",
+    contexto: "",
+    instrucoes: "",
+    restricoes: "",
+  });
+  const [botLoading, setBotLoading] = useState(true);
+  const [botSaving, setBotSaving] = useState(false);
+  const [botSaved, setBotSaved] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/bot/config")
+      .then((r) => r.json())
+      .then((data: BotConfig) => setBotConfig(data))
+      .catch(() => {})
+      .finally(() => setBotLoading(false));
+  }, []);
+
+  async function saveBotConfig() {
+    setBotSaving(true);
+    await fetch("/api/bot/config", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(botConfig),
+    });
+    setBotSaving(false);
+    setBotSaved(true);
+    setTimeout(() => setBotSaved(false), 2500);
+  }
+
+  // ── Templates state ─────────────────────────────────────────────────────────
+  const [templates, setTemplates] = useState(DEFAULT_WHATSAPP_TEMPLATES);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [createPanel, setCreatePanel] = useState(false);
+  const [newTpl, setNewTpl] = useState({ titulo: "", gatilho: "", mensagem: "" });
+  const [gatilhoOpen, setGatilhoOpen] = useState(false);
+  const [draftGatilhos, setDraftGatilhos] = useState<Record<string, string>>({});
+  const [editGatilhoOpen, setEditGatilhoOpen] = useState<string | null>(null);
+
+  function startEdit(t: WhatsappTemplate) {
+    setDrafts((prev) => ({ ...prev, [t.id]: prev[t.id] ?? t.mensagem }));
+    setDraftGatilhos((prev) => ({ ...prev, [t.id]: prev[t.id] ?? t.gatilho ?? "manual" }));
+    setExpanded((prev) => (prev === t.id ? null : t.id));
+    setEditGatilhoOpen(null);
+  }
+
+  function saveTemplate(id: string) {
+    setTemplates((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? { ...t, mensagem: drafts[id] ?? t.mensagem, gatilho: draftGatilhos[id] ?? t.gatilho }
+          : t,
+      ),
+    );
+    setExpanded(null);
+    setEditGatilhoOpen(null);
+  }
+
+  function createTemplate() {
+    if (!newTpl.titulo.trim() || !newTpl.mensagem.trim()) return;
+    const id = `custom_${Date.now()}`;
+    const gatilhoInfo = GATILHOS.find((g) => g.value === newTpl.gatilho);
+    setTemplates((prev) => [
+      ...prev,
+      {
+        id,
+        titulo: newTpl.titulo,
+        descricao: gatilhoInfo ? gatilhoInfo.descricao : "Template personalizado",
+        mensagem: newTpl.mensagem,
+        gatilho: newTpl.gatilho || "manual",
+        custom: true,
+      },
+    ]);
+    setNewTpl({ titulo: "", gatilho: "", mensagem: "" });
+    setCreatePanel(false);
+  }
+
+  function deleteTemplate(id: string) {
+    setTemplates((prev) => prev.filter((t) => t.id !== id));
+    if (expanded === id) setExpanded(null);
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Sub-tabs */}
+      <div className="flex gap-2">
+        {(["bot", "mensagens"] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setView(v)}
+            className={[
+              "flex items-center gap-1.5 rounded-full border-2 px-4 py-2 text-sm font-semibold transition-colors",
+              view === v
+                ? "bg-black text-white border-black"
+                : "bg-[#FAFAFA] text-[#656565] border-[#F1f1f1]",
+            ].join(" ")}
+          >
+            {v === "bot" ? (
+              <><Sparkles className="w-3.5 h-3.5" /> Bot IA</>
+            ) : (
+              <><FileText className="w-3.5 h-3.5" /> Mensagens</>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Bot canvas ─────────────────────────────────────────────────────────── */}
+      {view === "bot" && (
+        <div className="flex flex-col gap-3">
+          <BotCanvas
+            botConfig={botConfig}
+            setBotConfig={setBotConfig}
+            loading={botLoading}
+            templates={templates}
+          />
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={saveBotConfig}
+              disabled={botSaving || botLoading}
+              className="flex-1 rounded-full bg-black text-white py-3.5 text-sm font-semibold disabled:opacity-50"
+            >
+              {botSaving ? "Salvando..." : botSaved ? "Salvo ✓" : "Salvar configurações"}
+            </button>
+          </div>
+          <p className="text-xs text-[#656565] text-center">
+            Webhook Evolution API →{" "}
+            <span className="font-mono bg-[#F1f1f1] px-1 rounded">/api/webhooks/evolution</span>
+          </p>
+        </div>
+      )}
+
+      {/* ── Mensagens ──────────────────────────────────────────────────────────── */}
+      {view === "mensagens" && (
+        <div className="flex flex-col gap-3">
+
+          {/* Header row */}
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-[#111]">Templates de mensagem</p>
+            <button
+              type="button"
+              onClick={() => { setCreatePanel((p) => !p); setGatilhoOpen(false); }}
+              className={[
+                "flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold border-2 transition-colors",
+                createPanel ? "bg-black text-white border-black" : "bg-[#FAFAFA] text-[#111] border-[#F1f1f1]",
+              ].join(" ")}
+            >
+              <Plus className="w-4 h-4" /> Novo template
+            </button>
+          </div>
+
+          {/* Create panel */}
+          {createPanel && (
+            <div className="rounded-2xl border-2 border-[#F1f1f1] bg-[#FAFAFA] p-4 flex flex-col gap-4">
+              <p className="font-bold text-sm">Novo template</p>
+
+              {/* Nome */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-[#656565]">Nome do template</label>
+                <input
+                  value={newTpl.titulo}
+                  onChange={(e) => setNewTpl((p) => ({ ...p, titulo: e.target.value }))}
+                  placeholder="Ex: Pós-atendimento, Promoção..."
+                  className="rounded-xl border-2 border-[#F1f1f1] bg-white px-4 py-2.5 text-sm focus:outline-none focus:border-black"
+                />
+              </div>
+
+              {/* Gatilho */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-[#656565]">Gatilho — quando enviar</label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setGatilhoOpen((p) => !p)}
+                    className="w-full flex items-center justify-between rounded-xl border-2 border-[#F1f1f1] bg-white px-4 py-2.5 text-sm focus:outline-none focus:border-black text-left"
+                  >
+                    {newTpl.gatilho ? (
+                      <span className="flex items-center gap-2">
+                        <span>{GATILHOS.find((g) => g.value === newTpl.gatilho)?.icon}</span>
+                        <span className="font-medium">{GATILHOS.find((g) => g.value === newTpl.gatilho)?.label}</span>
+                      </span>
+                    ) : (
+                      <span className="text-[#656565]">Selecione um gatilho...</span>
+                    )}
+                    <ChevronDown className="w-4 h-4 text-[#656565]" />
+                  </button>
+                  {gatilhoOpen && (
+                    <div className="absolute z-20 mt-1 w-full rounded-xl border-2 border-[#F1f1f1] bg-white shadow-lg overflow-hidden">
+                      {newTpl.gatilho && (
+                        <button
+                          type="button"
+                          onClick={() => { setNewTpl((p) => ({ ...p, gatilho: "" })); setGatilhoOpen(false); }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-red-50 transition-colors border-b border-[#F1f1f1] text-red-500"
+                        >
+                          <X className="w-4 h-4" />
+                          <span className="text-sm font-medium">Remover gatilho</span>
+                        </button>
+                      )}
+                      {GATILHOS.map((g) => (
+                        <button
+                          key={g.value}
+                          type="button"
+                          onClick={() => { setNewTpl((p) => ({ ...p, gatilho: g.value })); setGatilhoOpen(false); }}
+                          className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[#FAFAFA] transition-colors border-b border-[#F1f1f1] last:border-0"
+                        >
+                          <span className="text-lg leading-none mt-0.5">{g.icon}</span>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold">{g.label}</p>
+                            <p className="text-xs text-[#656565]">{g.descricao}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Mensagem */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-[#656565]">Mensagem</label>
+                <textarea
+                  value={newTpl.mensagem}
+                  onChange={(e) => setNewTpl((p) => ({ ...p, mensagem: e.target.value }))}
+                  placeholder="Olá {{cliente}}! ..."
+                  rows={4}
+                  className="w-full rounded-xl border-2 border-[#F1f1f1] bg-white px-4 py-3 text-sm focus:outline-none focus:border-black resize-none"
+                />
+                <div className="flex flex-wrap gap-1.5">
+                  {TEMPLATE_VARIABLES.map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setNewTpl((p) => ({ ...p, mensagem: p.mensagem + v }))}
+                      className="rounded-full bg-white border border-[#F1f1f1] px-2 py-1 text-xs font-mono text-[#656565] hover:border-black transition-colors"
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setCreatePanel(false)} className="flex-1 rounded-full border-2 border-[#F1f1f1] py-2.5 text-sm font-semibold text-[#656565]">Cancelar</button>
+                <button type="button" onClick={createTemplate} disabled={!newTpl.titulo.trim() || !newTpl.mensagem.trim()} className="flex-1 rounded-full bg-black text-white py-2.5 text-sm font-semibold disabled:opacity-40">Criar template</button>
+              </div>
+            </div>
+          )}
+
+          {/* Template list */}
+          {templates.map((t) => {
+            const isExpanded = expanded === t.id;
+            const gatilhoInfo = GATILHOS.find((g) => g.value === t.gatilho);
+            return (
+              <div key={t.id} className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
+                <div className="w-full flex items-center gap-3 p-4">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(t)}
+                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-black flex items-center justify-center shrink-0 text-lg leading-none">
+                      {gatilhoInfo ? gatilhoInfo.icon : <FileText className="w-4 h-4 text-white" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold text-sm">{t.titulo}</p>
+                        {gatilhoInfo && (
+                          <span className="rounded-full px-2 py-0.5 text-xs font-semibold flex items-center gap-1 bg-green-50 border border-green-200 text-green-700">
+                            ⚡ {gatilhoInfo.label}
+                          </span>
+                        )}
+                        {t.custom && (
+                          <span className="rounded-full bg-indigo-50 border border-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-600">
+                            Personalizado
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-[#656565] truncate mt-0.5">{t.descricao}</p>
+                    </div>
+                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button type="button" onClick={() => startEdit(t)} className="p-1.5 rounded-lg hover:bg-[#F1f1f1] transition-colors">
+                      <Pencil className="w-4 h-4 text-[#656565]" />
+                    </button>
+                    {t.custom && (
+                      <button type="button" onClick={() => deleteTemplate(t.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors">
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {isExpanded && (
+                  <div className="px-4 pb-4 border-t border-[#F1f1f1] pt-3 flex flex-col gap-3">
+                    {/* Gatilho editável */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-semibold text-[#656565]">Gatilho — quando enviar</label>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setEditGatilhoOpen((p) => p === t.id ? null : t.id)}
+                          className="w-full flex items-center justify-between rounded-xl border-2 border-[#F1f1f1] bg-white px-3 py-2.5 text-sm focus:outline-none focus:border-black text-left"
+                        >
+                          {(() => {
+                            const g = GATILHOS.find((g) => g.value === (draftGatilhos[t.id] ?? t.gatilho ?? "manual"));
+                            return g ? (
+                              <span className="flex items-center gap-2">
+                                <span>{g.icon}</span>
+                                <span className="font-medium">{g.label}</span>
+                              </span>
+                            ) : <span className="text-[#656565]">Selecione...</span>;
+                          })()}
+                          <ChevronDown className="w-4 h-4 text-[#656565]" />
+                        </button>
+                        {editGatilhoOpen === t.id && (
+                          <div className="absolute z-20 mt-1 w-full rounded-xl border-2 border-[#F1f1f1] bg-white shadow-lg overflow-hidden">
+                            {(draftGatilhos[t.id] ?? t.gatilho) && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDraftGatilhos((prev) => ({ ...prev, [t.id]: "" }));
+                                  setEditGatilhoOpen(null);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-red-50 transition-colors border-b border-[#F1f1f1] text-red-500"
+                              >
+                                <X className="w-4 h-4" />
+                                <span className="text-sm font-medium">Remover gatilho</span>
+                              </button>
+                            )}
+                            {GATILHOS.map((g) => {
+                              const isSelected = (draftGatilhos[t.id] ?? t.gatilho ?? "") === g.value;
+                              return (
+                                <button
+                                  key={g.value}
+                                  type="button"
+                                  onClick={() => {
+                                    setDraftGatilhos((prev) => ({ ...prev, [t.id]: g.value }));
+                                    setEditGatilhoOpen(null);
+                                  }}
+                                  className={[
+                                    "w-full flex items-start gap-3 px-4 py-3 text-left transition-colors border-b border-[#F1f1f1] last:border-0",
+                                    isSelected ? "bg-black/5" : "hover:bg-[#FAFAFA]",
+                                  ].join(" ")}
+                                >
+                                  <span className="text-lg leading-none mt-0.5">{g.icon}</span>
+                                  <div className="flex-1">
+                                    <p className="text-sm font-semibold">{g.label}</p>
+                                    <p className="text-xs text-[#656565]">{g.descricao}</p>
+                                  </div>
+                                  {isSelected && <Check className="w-4 h-4 text-black mt-1 shrink-0" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <textarea
+                      value={drafts[t.id] ?? t.mensagem}
+                      onChange={(e) => setDrafts((prev) => ({ ...prev, [t.id]: e.target.value }))}
+                      rows={4}
+                      className="w-full rounded-xl border-2 border-[#F1f1f1] bg-white px-4 py-3 text-sm focus:outline-none focus:border-black resize-none"
+                    />
+                    <div className="flex flex-wrap gap-1.5">
+                      {TEMPLATE_VARIABLES.map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setDrafts((prev) => ({ ...prev, [t.id]: (prev[t.id] ?? t.mensagem) + v }))}
+                          className="rounded-full bg-white border border-[#F1f1f1] px-2 py-1 text-xs font-mono text-[#656565] hover:border-black transition-colors"
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => saveTemplate(t.id)}
+                      className="w-full rounded-full bg-black text-white py-2.5 text-sm font-semibold"
+                    >
+                      Salvar
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type NotificationToggleId =
+  | "confirmacaoAgendamento"
+  | "lembrete24h"
+  | "avisoCancelamento"
+  | "aniversario"
+  | "pesquisaSatisfacao"
+  | "novoAgendamento"
+  | "cancelamentoEquipe"
+  | "pagamentoRecebido"
+  | "novoCliente";
+
+type NotifItem = {
   id: NotificationToggleId;
   label: string;
   description: string;
   icon: React.ReactNode;
-}> = [
+  templateId?: string;
+};
+
+type NotificationGroup = {
+  titulo: string;
+  subtitulo?: string;
+  items: NotifItem[];
+};
+
+const NOTIFICATION_GROUPS: NotificationGroup[] = [
   {
-    id: "novoAgendamento",
-    label: "Novo agendamento",
-    description: "Avisa a equipe quando um cliente agenda um horário",
-    icon: <CalendarDays className="w-4 h-4 text-[#656565]" />,
+    titulo: "Notificações clientes",
+    items: [
+      {
+        id: "confirmacaoAgendamento",
+        label: "Confirmação de agendamento",
+        description: "Envia confirmação ao cliente assim que o horário é marcado",
+        icon: <CheckCircle2 className="w-4 h-4 text-[#656565]" />,
+        templateId: "confirmacao",
+      },
+      {
+        id: "lembrete24h",
+        label: "Lembrete 24h antes",
+        description: "Lembrete automático enviado ao cliente no dia anterior",
+        icon: <Clock className="w-4 h-4 text-[#656565]" />,
+        templateId: "lembrete",
+      },
+      {
+        id: "avisoCancelamento",
+        label: "Aviso de cancelamento",
+        description: "Notifica o cliente quando um agendamento é cancelado",
+        icon: <XCircle className="w-4 h-4 text-[#656565]" />,
+        templateId: "cancelamento_barbearia",
+      },
+      {
+        id: "aniversario",
+        label: "Aniversário",
+        description: "Mensagem automática de parabéns no dia do aniversário",
+        icon: <Gift className="w-4 h-4 text-[#656565]" />,
+        templateId: "aniversario",
+      },
+      {
+        id: "pesquisaSatisfacao",
+        label: "Pesquisa de satisfação",
+        description: "Enviada ao cliente após o atendimento ser concluído",
+        icon: <Star className="w-4 h-4 text-[#656565]" />,
+        templateId: "pesquisaSatisfacao",
+      },
+    ],
   },
   {
-    id: "lembrete24h",
-    label: "Lembrete 24h antes",
-    description: "Envia lembrete automático para o cliente",
-    icon: <Clock className="w-4 h-4 text-[#656565]" />,
+    titulo: "Notificações equipe",
+    subtitulo: "Enviadas pelo número cadastrado como barbearia",
+    items: [
+      {
+        id: "novoAgendamento",
+        label: "Novo agendamento",
+        description: "Avisa o barbeiro responsável quando um cliente agenda",
+        icon: <CalendarDays className="w-4 h-4 text-[#656565]" />,
+        templateId: "equipe_novoAgendamento",
+      },
+      {
+        id: "cancelamentoEquipe",
+        label: "Cancelamento pelo cliente",
+        description: "Avisa o barbeiro quando um cliente cancela o horário",
+        icon: <XCircle className="w-4 h-4 text-[#656565]" />,
+        templateId: "equipe_cancelamento",
+      },
+    ],
   },
   {
-    id: "confirmacao",
-    label: "Confirmação de agendamento",
-    description: "Confirma o horário assim que ele é marcado",
-    icon: <CheckCircle2 className="w-4 h-4 text-[#656565]" />,
-  },
-  {
-    id: "cancelamento",
-    label: "Cancelamento",
-    description: "Avisa o cliente e a equipe sobre cancelamentos",
-    icon: <XCircle className="w-4 h-4 text-[#656565]" />,
-  },
-  {
-    id: "aniversario",
-    label: "Aniversário do cliente",
-    description: "Envia mensagem de parabéns automaticamente",
-    icon: <Gift className="w-4 h-4 text-[#656565]" />,
-  },
-  {
-    id: "pesquisaSatisfacao",
-    label: "Pesquisa de satisfação",
-    description: "Envia após o atendimento ser concluído",
-    icon: <Star className="w-4 h-4 text-[#656565]" />,
+    titulo: "Notificações barbearia",
+    subtitulo: "Enviadas pelo número cadastrado como barbearia",
+    items: [
+      {
+        id: "pagamentoRecebido",
+        label: "Pagamento recebido",
+        description: "Avisa a barbearia quando um pagamento é aprovado",
+        icon: <CheckCircle2 className="w-4 h-4 text-[#656565]" />,
+        templateId: "barbearia_pagamento",
+      },
+      {
+        id: "novoCliente",
+        label: "Novo cliente cadastrado",
+        description: "Avisa quando um novo cliente cria conta na plataforma",
+        icon: <Star className="w-4 h-4 text-[#656565]" />,
+        templateId: "barbearia_novoCliente",
+      },
+    ],
   },
 ];
 
-function WhatsappNotificacoes() {
-  const [enabled, setEnabled] = useState<
-    Record<NotificationToggleId, boolean>
-  >({
-    novoAgendamento: true,
-    lembrete24h: true,
-    confirmacao: true,
-    cancelamento: true,
-    aniversario: false,
-    pesquisaSatisfacao: false,
-  });
+const TEMPLATE_VARS_HINT = ["{{cliente}}", "{{barbearia}}", "{{data}}", "{{horario}}", "{{servico}}", "{{preco}}"];
+
+function NotificationToggleRow({
+  item,
+  last,
+  enabled,
+  onToggle,
+  templateText,
+  onSaveTemplate,
+}: {
+  item: NotifItem;
+  last: boolean;
+  enabled: boolean;
+  onToggle: () => void;
+  templateText: string;
+  onSaveTemplate: (text: string) => Promise<void>;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [draft, setDraft] = useState(templateText);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => { setDraft(templateText); }, [templateText]);
+
+  async function handleSave() {
+    setSaving(true);
+    await onSaveTemplate(draft);
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
 
   return (
-    <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
-      {NOTIFICATION_TOGGLES.map((n, i) => (
-        <div
-          key={n.id}
-          className={[
-            "flex items-center gap-3 p-4",
-            i < NOTIFICATION_TOGGLES.length - 1
-              ? "border-b border-[#F1f1f1]"
-              : "",
-          ].join(" ")}
-        >
-          <div className="w-9 h-9 rounded-lg bg-white border-2 border-[#F1f1f1] flex items-center justify-center shrink-0">
-            {n.icon}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm">{n.label}</p>
-            <p className="text-xs text-[#656565]">{n.description}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() =>
-              setEnabled((prev) => ({ ...prev, [n.id]: !prev[n.id] }))
-            }
-            className="shrink-0"
-          >
-            {enabled[n.id] ? (
+    <div className={!last ? "border-b border-[#F1f1f1]" : ""}>
+      <div className="flex items-center gap-3 p-4">
+        <div className="w-9 h-9 rounded-lg bg-white border-2 border-[#F1f1f1] flex items-center justify-center shrink-0">
+          {item.icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm">{item.label}</p>
+          <p className="text-xs text-[#656565]">{item.description}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {item.templateId && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="w-8 h-8 rounded-full bg-white border-2 border-[#F1f1f1] flex items-center justify-center text-[#656565]"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <button type="button" onClick={onToggle}>
+            {enabled ? (
               <ToggleRight className="w-7 h-7 text-black" />
             ) : (
               <ToggleLeft className="w-7 h-7 text-[#656565]" />
             )}
           </button>
+        </div>
+      </div>
+
+      {expanded && item.templateId && (
+        <div className="px-4 pb-4 flex flex-col gap-2">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={4}
+            className="w-full rounded-xl border-2 border-[#F1f1f1] bg-white px-4 py-3 text-sm focus:outline-none focus:border-black resize-none"
+          />
+          <div className="flex flex-wrap gap-1">
+            {TEMPLATE_VARS_HINT.map((v) => (
+              <span key={v} className="rounded-full bg-white border border-[#F1f1f1] px-2 py-0.5 text-xs font-mono text-[#656565]">
+                {v}
+              </span>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full rounded-full bg-black text-white py-2.5 text-sm font-semibold disabled:opacity-50"
+          >
+            {saving ? "Salvando..." : saved ? "Salvo ✓" : "Salvar mensagem"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WhatsappNotificacoes() {
+  const [enabled, setEnabled] = useState<Record<NotificationToggleId, boolean>>({
+    confirmacaoAgendamento: true,
+    lembrete24h: true,
+    avisoCancelamento: true,
+    aniversario: false,
+    pesquisaSatisfacao: false,
+    novoAgendamento: true,
+    cancelamentoEquipe: true,
+    pagamentoRecebido: false,
+    novoCliente: false,
+  });
+  const [templates, setTemplates] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch("/api/whatsapp/templates")
+      .then((r) => r.json())
+      .then((data: Array<{ id: string; mensagem: string }>) => {
+        const map: Record<string, string> = {};
+        data.forEach((t) => { map[t.id] = t.mensagem; });
+        setTemplates(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  async function saveTemplate(templateId: string, mensagem: string) {
+    await fetch("/api/whatsapp/templates", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: templateId, mensagem }),
+    });
+    setTemplates((prev) => ({ ...prev, [templateId]: mensagem }));
+  }
+
+  function toggle(id: NotificationToggleId) {
+    setEnabled((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      {NOTIFICATION_GROUPS.map((group) => (
+        <div key={group.titulo}>
+          <div className="mb-2 px-1">
+            <p className="text-xs font-semibold text-[#656565] uppercase tracking-wide">{group.titulo}</p>
+            {group.subtitulo && (
+              <p className="text-xs text-[#656565] mt-0.5">{group.subtitulo}</p>
+            )}
+          </div>
+          <div className="rounded-xl border-2 border-[#F1f1f1] bg-[#FAFAFA] overflow-hidden">
+            {group.items.map((item, i) => (
+              <NotificationToggleRow
+                key={item.id}
+                item={item}
+                last={i === group.items.length - 1}
+                enabled={enabled[item.id]}
+                onToggle={() => toggle(item.id)}
+                templateText={item.templateId ? (templates[item.templateId] ?? "") : ""}
+                onSaveTemplate={(text) => item.templateId ? saveTemplate(item.templateId, text) : Promise.resolve()}
+              />
+            ))}
+          </div>
         </div>
       ))}
     </div>

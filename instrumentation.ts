@@ -1,12 +1,4 @@
-export async function register() {
-  if (process.env.NEXT_RUNTIME === "nodejs") {
-    const { startSocket, listSavedInstanceIds } = await import(
-      "./lib/whatsapp/socket"
-    );
-    for (const instanceId of listSavedInstanceIds()) {
-      startSocket(instanceId).catch((err) => {
-        console.error(`[whatsapp:${instanceId}] Falha ao iniciar conexão:`, err);
-      });
-    }
-  }
-}
+// Instrumentation hook do Next.js.
+// O Baileys foi substituído pela Evolution API (serviço externo),
+// então não há mais sockets locais para inicializar no boot.
+export async function register() {}

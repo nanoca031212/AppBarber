@@ -15,9 +15,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json([]);
   }
 
+  const barbeiro = await prisma.barbeiro.findFirst({ where: { nome: barberName } });
+  if (!barbeiro) return NextResponse.json([]);
+
   const reservas = await prisma.reserva.findMany({
     where: {
-      barbeiroId: `name:${barberName}`,
+      barbeiroId: barbeiro.id,
       status: { not: "CANCELADO" },
     },
     select: {

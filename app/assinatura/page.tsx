@@ -25,7 +25,7 @@ const Assinatura = () => {
       body: JSON.stringify({
         successUrl: user
           ? `${window.location.origin}/agendamentos?assinado=1`
-          : `${window.location.origin}/cadastro?session_id={CHECKOUT_SESSION_ID}`,
+          : `${window.location.origin}/cadastro`,
         cancelUrl: window.location.href,
       }),
     });

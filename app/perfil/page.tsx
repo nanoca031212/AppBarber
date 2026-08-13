@@ -48,10 +48,29 @@ export default function PerfilPage() {
     setErro(null);
   }
 
-  function saveEditing() {
+  async function saveEditing() {
     if (!user) return;
     if (!nome.trim() || !email.trim()) {
       setErro("Nome e email são obrigatórios");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/clientes/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: nome.trim(),
+          email: email.trim(),
+          telefone: telefone.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const { error } = await res.json();
+        setErro(error ?? "Erro ao salvar");
+        return;
+      }
+    } catch {
+      setErro("Erro de conexão ao salvar");
       return;
     }
     setUser({

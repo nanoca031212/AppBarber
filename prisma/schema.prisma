@@ -13,8 +13,10 @@ model Cliente {
   telefone  String
   email     String?   @unique
   senha     String?
-  createdAt DateTime  @default(now())
-  reservas  Reserva[]
+  dataNascimento DateTime?
+  createdAt      DateTime     @default(now())
+  reservas       Reserva[]
+  assinatura     Assinatura?
 }
 
 model Barbeiro {
@@ -56,17 +58,18 @@ model BarbeiroServico {
 }
 
 model Reserva {
-  id         String           @id @default(cuid())
-  clienteId  String
-  barbeiroId String
-  data       DateTime
-  horario    String
-  status     StatusReserva    @default(PENDENTE)
-  total      Float
-  createdAt  DateTime         @default(now())
-  barbeiro   Barbeiro         @relation(fields: [barbeiroId], references: [id])
-  cliente    Cliente          @relation(fields: [clienteId], references: [id])
-  servicos   ReservaServico[]
+  id           String           @id @default(cuid())
+  clienteId    String
+  barbeiroId   String
+  data         DateTime
+  horario      String
+  status       StatusReserva    @default(PENDENTE)
+  canceladoPor String?
+  total        Float
+  createdAt    DateTime         @default(now())
+  barbeiro     Barbeiro         @relation(fields: [barbeiroId], references: [id])
+  cliente      Cliente          @relation(fields: [clienteId], references: [id])
+  servicos     ReservaServico[]
 }
 
 model ReservaServico {
@@ -130,6 +133,69 @@ model WhatsappTemplate {
   mensagem  String
   createdAt DateTime @default(now())
   updatedAt DateTime
+}
+
+model AsaasCheckout {
+  id           String   @id @default(cuid())
+  externalRef  String   @unique
+  tipo         String
+  status       String   @default("PENDING")
+  checkoutId   String?
+  paymentId    String?
+  customerId   String?
+  nome         String?
+  email        String?
+  telefone     String?
+  dadosReserva Json?
+  reservaId    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model GestorPixels {
+  id          String   @id @default("default")
+  metaPixelId String?
+  metaAtivo   Boolean  @default(false)
+  ga4Id       String?
+  ga4Ativo    Boolean  @default(false)
+  tiktokId    String?
+  tiktokAtivo Boolean  @default(false)
+  gtmId       String?
+  gtmAtivo    Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+}
+
+model Assinatura {
+  id               String   @id @default(cuid())
+  clienteId        String   @unique
+  asaasCheckoutId  String?
+  status           String   @default("ATIVA")
+  creditosUsados   Int      @default(0)
+  inicioVigencia   DateTime @default(now())
+  fimVigencia      DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  cliente          Cliente  @relation(fields: [clienteId], references: [id])
+}
+
+model BotConfig {
+  id          String   @id @default("default")
+  ativo       Boolean  @default(false)
+  identidade  String   @default("") @db.Text
+  contexto    String   @default("") @db.Text
+  instrucoes  String   @default("") @db.Text
+  restricoes  String   @default("") @db.Text
+  updatedAt   DateTime @updatedAt
+}
+
+model BotMensagem {
+  id        String   @id @default(cuid())
+  telefone  String
+  role      String
+  conteudo  String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([telefone, createdAt])
 }
 
 enum StatusReserva {

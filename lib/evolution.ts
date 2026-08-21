@@ -107,6 +107,30 @@ export function deleteInstance(name: string) {
   });
 }
 
+// ─── Webhook ──────────────────────────────────────────────────────────────────
+// Sem isso configurado na instância, a Evolution API nunca avisa nosso servidor
+// quando uma mensagem chega — o bot fica conectado mas "surdo".
+
+export function webhookUrl(): string {
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  return `${base}/api/webhooks/evolution`;
+}
+
+export function setWebhook(name: string) {
+  return evolutionFetch<unknown>(`/webhook/set/${name}`, {
+    method: "POST",
+    body: JSON.stringify({
+      webhook: {
+        enabled: true,
+        url: webhookUrl(),
+        webhookByEvents: false,
+        webhookBase64: false,
+        events: ["MESSAGES_UPSERT"],
+      },
+    }),
+  });
+}
+
 // ─── Mensagens ────────────────────────────────────────────────────────────────
 
 export type SendTextResponse = {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { connectInstance, getConnectionState, instanceName } from "@/lib/evolution";
+import { connectInstance, getConnectionState, instanceName, setWebhook } from "@/lib/evolution";
 
 export async function GET(
   _req: Request,
@@ -12,11 +12,17 @@ export async function GET(
     const state = await getConnectionState(instancia).catch(() => null);
 
     if (state?.instance?.state === "open") {
+      await setWebhook(instancia).catch((err) =>
+        console.error(`[whatsapp/qr] Falha ao configurar webhook de ${instancia}:`, err),
+      );
       return NextResponse.json({ status: "open", message: "Já conectado" });
     }
 
     // Busca QR code da instância
     const data = await connectInstance(instancia);
+    await setWebhook(instancia).catch((err) =>
+      console.error(`[whatsapp/qr] Falha ao configurar webhook de ${instancia}:`, err),
+    );
 
     if (!data?.base64) {
       return NextResponse.json({

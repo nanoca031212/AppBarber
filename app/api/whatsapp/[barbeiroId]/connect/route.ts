@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createInstance, connectInstance, getConnectionState, instanceName } from "@/lib/evolution";
+import { createInstance, connectInstance, getConnectionState, instanceName, setWebhook } from "@/lib/evolution";
 
 export async function POST(
   _req: Request,
@@ -20,6 +20,10 @@ export async function POST(
       await connectInstance(instancia);
     }
     // Se já está "connecting" ou "open", não faz nada
+
+    await setWebhook(instancia).catch((err) =>
+      console.error(`[whatsapp/connect] Falha ao configurar webhook de ${instancia}:`, err),
+    );
 
     return NextResponse.json({ ok: true });
   } catch (err) {

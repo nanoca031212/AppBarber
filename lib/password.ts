@@ -14,3 +14,11 @@ export function verifyPassword(senha: string, stored: string): boolean {
   if (candidate.length !== hashBuffer.length) return false;
   return timingSafeEqual(candidate, hashBuffer);
 }
+
+// Sem caracteres ambíguos (0/O, 1/l/I) — a senha é lida por um humano no WhatsApp.
+const ALFABETO_SENHA = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+
+export function gerarSenhaAleatoria(tamanho = 8): string {
+  const bytes = randomBytes(tamanho);
+  return Array.from(bytes, (b) => ALFABETO_SENHA[b % ALFABETO_SENHA.length]).join("");
+}

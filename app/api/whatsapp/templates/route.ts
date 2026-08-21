@@ -80,6 +80,107 @@ const DEFAULT_TEMPLATES = [
     mensagem:
       "🆕 Novo cliente cadastrado!\nNome: {{cliente}}\nTelefone: {{horario}}",
   },
+  {
+    id: "bot_escolhaBarbeiro",
+    nome: "bot_escolhaBarbeiro",
+    mensagem:
+      "Olá! 👋 Bem-vindo(a) à {{barbearia}}! Com qual barbeiro você quer marcar?\n{{barbeiros}}\nMe responde com o número ou o nome.",
+  },
+  {
+    id: "bot_barbeiroInvalido",
+    nome: "bot_barbeiroInvalido",
+    mensagem: "Não encontrei esse barbeiro 🤔 Escolha um da lista:\n{{barbeiros}}",
+  },
+  {
+    id: "bot_boasVindas",
+    nome: "bot_boasVindas",
+    mensagem:
+      "Perfeito! Pra qual dia você quer vir? (ex: hoje, amanhã, 20/08)",
+  },
+  {
+    id: "bot_diaInvalido",
+    nome: "bot_diaInvalido",
+    mensagem: "Não entendi essa data 🤔 Pode me mandar assim: hoje, amanhã ou 20/08?",
+  },
+  {
+    id: "bot_semHorarios",
+    nome: "bot_semHorarios",
+    mensagem: "Poxa, não tem horário livre em {{data}} 😕 Quer tentar outro dia?",
+  },
+  {
+    id: "bot_horariosDisponiveis",
+    nome: "bot_horariosDisponiveis",
+    mensagem: "Horários disponíveis em {{data}}: {{horarios}}. Me diz qual você prefere!",
+  },
+  {
+    id: "bot_horarioInvalido",
+    nome: "bot_horarioInvalido",
+    mensagem: "Não achei esse horário na lista 🤔 Escolha um destes: {{horarios}}",
+  },
+  {
+    id: "bot_pedirNome",
+    nome: "bot_pedirNome",
+    mensagem: "Legal! Antes de confirmar, preciso criar seu cadastro. Qual seu nome completo?",
+  },
+  {
+    id: "bot_pedirEmail",
+    nome: "bot_pedirEmail",
+    mensagem: "Prazer, {{cliente}}! Agora me manda seu e-mail, por favor.",
+  },
+  {
+    id: "bot_emailInvalido",
+    nome: "bot_emailInvalido",
+    mensagem: "Esse e-mail não parece válido 🤔 Pode conferir e mandar de novo?",
+  },
+  {
+    id: "bot_clienteReconhecido",
+    nome: "bot_clienteReconhecido",
+    mensagem: "Que bom te ver de novo, {{cliente}}! 🙌",
+  },
+  {
+    id: "bot_cadastroConcluido",
+    nome: "bot_cadastroConcluido",
+    mensagem:
+      "Cadastro criado, {{cliente}}! 🎉 Seu acesso ao site:\ne-mail: {{email}}\nsenha: {{senha}}\nGuarde em um lugar seguro.",
+  },
+  {
+    id: "bot_escolhaServico",
+    nome: "bot_escolhaServico",
+    mensagem: "Qual serviço você quer?\n{{servicos}}\nMe responde com o número ou o nome.",
+  },
+  {
+    id: "bot_servicoInvalido",
+    nome: "bot_servicoInvalido",
+    mensagem: "Não entendi o serviço 🤔 Escolha um da lista:\n{{servicos}}",
+  },
+  {
+    id: "bot_escolhaPagamento",
+    nome: "bot_escolhaPagamento",
+    mensagem:
+      "Como você prefere pagar?\n1️⃣ No local (na hora do atendimento)\n2️⃣ Online (Pix ou cartão)\nMe responde com o número ou local/online.",
+  },
+  {
+    id: "bot_pagamentoInvalido",
+    nome: "bot_pagamentoInvalido",
+    mensagem: "Não entendi 🤔 Responde com *local* ou *online*.",
+  },
+  {
+    id: "bot_pedidoOnline",
+    nome: "bot_pedidoOnline",
+    mensagem:
+      "Show! Gerei seu pedido 🧾 Pra confirmar o pagamento é só acessar: {{link}}\nAssim que o pagamento cair, seu horário fica garantido ✅",
+  },
+  {
+    id: "bot_foraDoAssunto",
+    nome: "bot_foraDoAssunto",
+    mensagem:
+      "Isso não é um assunto que eu consigo resolver por aqui 🙏 Posso te ajudar a marcar um horário de corte — é só me chamar!",
+  },
+  {
+    id: "bot_ajudaGenerica",
+    nome: "bot_ajudaGenerica",
+    mensagem: "Posso te ajudar a marcar um horário na {{barbearia}} 💈 Me diga se quer agendar um corte!",
+  },
 ];
 
 export async function GET() {
@@ -120,4 +221,16 @@ export async function PUT(req: NextRequest) {
   });
 
   return NextResponse.json(template);
+}
+
+export async function DELETE(req: NextRequest) {
+  const { id } = await req.json();
+
+  if (!id || typeof id !== "string") {
+    return NextResponse.json({ error: "id é obrigatório" }, { status: 400 });
+  }
+
+  await prisma.whatsappTemplate.deleteMany({ where: { id } });
+
+  return NextResponse.json({ ok: true });
 }

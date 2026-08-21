@@ -5,6 +5,7 @@ import {
   getConnectionState,
   getPairingCode,
   instanceName,
+  setWebhook,
 } from "@/lib/evolution";
 
 export async function POST(
@@ -30,6 +31,10 @@ export async function POST(
       await connectInstance(instancia);
     }
     // Se já está "connecting", não precisa fazer nada
+
+    await setWebhook(instancia).catch((err) =>
+      console.error(`[whatsapp/pairing] Falha ao configurar webhook de ${instancia}:`, err),
+    );
 
     const data = await getPairingCode(instancia, telefone);
     const code = data?.pairingCode ?? data?.code ?? null;

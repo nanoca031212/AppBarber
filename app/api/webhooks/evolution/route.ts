@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { chamarGemini, type GeminiMessage } from "@/lib/gemini";
-import { sendText } from "@/lib/evolution";
+import { processarMensagemBot } from "@/lib/bot/flow";
 
 // Evolution API envia eventos de mensagem recebida
 type EvolutionWebhook = {
@@ -13,33 +12,6 @@ type EvolutionWebhook = {
     messageType?: string;
   };
 };
-
-function montarSystemPrompt(config: {
-  identidade: string;
-  contexto: string;
-  instrucoes: string;
-  restricoes: string;
-}): string {
-  const partes: string[] = [];
-
-  if (config.identidade.trim())
-    partes.push(`## Identidade\n${config.identidade}`);
-  if (config.contexto.trim())
-    partes.push(`## Contexto da Barbearia\n${config.contexto}`);
-  if (config.instrucoes.trim())
-    partes.push(`## Instruções\n${config.instrucoes}`);
-  if (config.restricoes.trim())
-    partes.push(`## Restrições\n${config.restricoes}`);
-
-  partes.push(
-    "## Regras gerais\n" +
-      "- Responda sempre em português do Brasil.\n" +
-      "- Seja breve e direto. Máximo 3 parágrafos curtos.\n" +
-      "- Nunca invente informações que não foram fornecidas.",
-  );
-
-  return partes.join("\n\n");
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -65,46 +37,8 @@ export async function POST(req: NextRequest) {
     if (!botConfig?.ativo) return NextResponse.json({ ok: true });
 
     const telefone = jid.replace("@s.whatsapp.net", "");
-    const instancia = body.instance;
 
-    // Histórico dos últimos 10 turnos (20 mensagens)
-    const historicoDB = await prisma.botMensagem.findMany({
-      where: { telefone },
-      orderBy: { createdAt: "asc" },
-      take: 20,
-    });
-
-    const historico: GeminiMessage[] = historicoDB.map((m) => ({
-      role: m.role as "user" | "model",
-      parts: [{ text: m.conteudo }],
-    }));
-
-    const systemPrompt = montarSystemPrompt(botConfig);
-    const resposta = await chamarGemini(systemPrompt, historico, texto);
-
-    if (!resposta) return NextResponse.json({ ok: true });
-
-    // Salva mensagens no histórico
-    await prisma.botMensagem.createMany({
-      data: [
-        { telefone, role: "user", conteudo: texto },
-        { telefone, role: "model", conteudo: resposta },
-      ],
-    });
-
-    // Limpa histórico antigo (mantém só os últimos 20)
-    const todos = await prisma.botMensagem.findMany({
-      where: { telefone },
-      orderBy: { createdAt: "desc" },
-      select: { id: true },
-    });
-    if (todos.length > 20) {
-      const idsParaExcluir = todos.slice(20).map((m) => m.id);
-      await prisma.botMensagem.deleteMany({ where: { id: { in: idsParaExcluir } } });
-    }
-
-    // Envia resposta pelo WhatsApp
-    await sendText(instancia, telefone, resposta);
+    await processarMensagemBot(telefone, texto, body.instance);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

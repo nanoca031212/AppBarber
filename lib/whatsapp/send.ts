@@ -10,9 +10,14 @@ export type TemplateVars = {
   duracao?: string;
   preco?: string;
   link?: string;
+  email?: string;
+  senha?: string;
+  horarios?: string;
+  servicos?: string;
+  barbeiros?: string;
 };
 
-function preencherTemplate(mensagem: string, vars: TemplateVars): string {
+export function preencherTemplate(mensagem: string, vars: TemplateVars): string {
   return mensagem
     .replace(/\{\{cliente\}\}/g, vars.cliente ?? "")
     .replace(/\{\{barbearia\}\}/g, vars.barbearia ?? "")
@@ -21,10 +26,15 @@ function preencherTemplate(mensagem: string, vars: TemplateVars): string {
     .replace(/\{\{servico\}\}/g, vars.servico ?? "")
     .replace(/\{\{duracao\}\}/g, vars.duracao ?? "")
     .replace(/\{\{preco\}\}/g, vars.preco ?? "")
-    .replace(/\{\{link\}\}/g, vars.link ?? "");
+    .replace(/\{\{link\}\}/g, vars.link ?? "")
+    .replace(/\{\{email\}\}/g, vars.email ?? "")
+    .replace(/\{\{senha\}\}/g, vars.senha ?? "")
+    .replace(/\{\{horarios\}\}/g, vars.horarios ?? "")
+    .replace(/\{\{servicos\}\}/g, vars.servicos ?? "")
+    .replace(/\{\{barbeiros\}\}/g, vars.barbeiros ?? "");
 }
 
-async function getTemplate(templateId: string): Promise<string | null> {
+export async function getTemplateMensagem(templateId: string): Promise<string | null> {
   const t = await prisma.whatsappTemplate.findUnique({ where: { id: templateId } });
   return t?.mensagem ?? null;
 }
@@ -36,7 +46,7 @@ export async function enviarMensagemTemplate(
   vars: TemplateVars,
 ): Promise<boolean> {
   try {
-    const mensagem = await getTemplate(templateId);
+    const mensagem = await getTemplateMensagem(templateId);
     if (!mensagem) {
       console.warn(`[whatsapp/send] Template "${templateId}" não encontrado.`);
       return false;

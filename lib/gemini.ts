@@ -8,6 +8,7 @@ export async function chamarGemini(
   systemPrompt: string,
   historico: GeminiMessage[],
   mensagemAtual: string,
+  generationConfig?: { temperature?: number; maxOutputTokens?: number },
 ): Promise<string> {
   const contents: GeminiMessage[] = [
     ...historico,
@@ -20,7 +21,11 @@ export async function chamarGemini(
     body: JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 512 },
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 512,
+        ...generationConfig,
+      },
     }),
   });
 

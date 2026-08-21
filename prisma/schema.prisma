@@ -198,6 +198,20 @@ model BotMensagem {
   @@index([telefone, createdAt])
 }
 
+model BotConversa {
+  telefone          String   @id
+  etapa             String   @default("INICIO")
+  clienteId         String?
+  barbeiroId        String?
+  nomeTemp          String?
+  emailTemp         String?
+  dataEscolhida     String?
+  horariosOfertados String?
+  horarioEscolhido  String?
+  servicoEscolhidoId String?
+  updatedAt         DateTime @updatedAt
+}
+
 enum StatusReserva {
   PENDENTE
   CONFIRMADO

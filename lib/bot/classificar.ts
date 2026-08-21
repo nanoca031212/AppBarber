@@ -14,9 +14,11 @@ OUTRO - tem relação com a barbearia (preço, serviços, endereço, etc) mas n�
 
 export async function classificarIntencao(mensagem: string): Promise<Intencao> {
   try {
+    // maxOutputTokens generoso: modelos com "thinking" gastam tokens
+    // internos antes de emitir a palavra da categoria.
     const resposta = await chamarGemini(PROMPT, [], mensagem, {
       temperature: 0,
-      maxOutputTokens: 8,
+      maxOutputTokens: 300,
     });
     const categoria = resposta.trim().toUpperCase().replace(/[^A-Z_]/g, "");
     if (CATEGORIAS.includes(categoria as Intencao)) return categoria as Intencao;
